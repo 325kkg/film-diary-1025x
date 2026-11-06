@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>我们的胶片日记</title>
+<meta name="theme-color" content="#3b2f25">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="胶片日记">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{--bg:#efe4cf;--card:#f8f0df;--ink:#3b2f25;--mut:#8a7762;--acc:#b5482f;--line:#cdb99a;--pol:#fffaf0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1e1914;--card:#2a231c;--ink:#eadcc4;--mut:#a69580;--acc:#e0805f;--line:#4a3f33;--pol:#3a3128;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1e1914;--card:#2a231c;--ink:#eadcc4;--mut:#a69580;--acc:#e0805f;--line:#4a3f33;--pol:#3a3128;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Songti SC","Noto Serif CJK SC",Georgia,serif;background-image:radial-gradient(rgba(120,90,50,.07) 1px,transparent 1px);background-size:4px 4px;min-height:100vh}
+.strip{height:14px;background:repeating-linear-gradient(90deg,var(--ink) 0 14px,transparent 14px 26px);opacity:.85}
+header{text-align:center;padding:14px 12px 4px}
+h1{margin:0;font:700 22px "Courier New",monospace;letter-spacing:2px}
+.sub{color:var(--mut);font:12px "Courier New",monospace}
+nav{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px dashed var(--line)}
+nav button{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 11px;border-radius:3px;font:inherit;font-size:13px;cursor:pointer}
+nav button.on{background:var(--ink);color:var(--bg)}
+main{max-width:640px;margin:0 auto;padding:14px 14px 90px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:0 0 12px;box-shadow:2px 3px 0 rgba(60,40,20,.12);cursor:pointer}
+.card.static{cursor:default}
+.hero{text-align:center;padding:22px 10px}
+.big{font:700 54px/1 "Courier New",monospace;color:var(--acc)}
+.mut{color:var(--mut);font-size:12px}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+h3{margin:0 0 6px;font:700 15px "Courier New","Songti SC",monospace;letter-spacing:1px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pol{background:var(--pol);padding:8px 8px 10px;box-shadow:2px 4px 8px rgba(0,0,0,.25);transform:rotate(var(--r,0deg));cursor:pointer}
+.pol img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:sepia(.35) contrast(1.05)}
+.pol p{margin:6px 0 0;font:12px "Courier New",monospace;text-align:center}
+.tl{border-left:2px solid var(--acc);margin-left:8px;padding-left:14px}
+.tl .it{position:relative;margin-bottom:14px;cursor:pointer}
+.tl .it:before{content:"";position:absolute;left:-21px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--acc)}
+.stamp{display:inline-block;border:2px solid var(--acc);color:var(--acc);padding:0 6px;border-radius:3px;font:700 12px "Courier New",monospace;transform:rotate(-4deg)}
+.fab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:28px;box-shadow:0 3px 8px rgba(0,0,0,.35);cursor:pointer}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--bg);padding:7px 14px;border-radius:3px;font:inherit;cursor:pointer}
+.btn.o{background:transparent;color:var(--ink)}
+dialog{border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:4px;width:min(94vw,440px);max-height:88vh;overflow:auto}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+label{display:block;margin:8px 0 2px;font-size:12px;color:var(--mut)}
+input,select,textarea{width:100%;padding:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:3px;font:inherit}
+input[type=checkbox]{width:auto}
+textarea{min-height:80px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:13px;z-index:20}
+.tag{font-size:11px;border:1px solid var(--line);padding:0 5px;border-radius:2px;color:var(--mut);margin-right:4px}
+.map{position:relative;aspect-ratio:4/3;border:2px solid var(--ink);border-radius:4px;background-color:var(--card);background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px;overflow:hidden}
+.map[style*="url("]{background-size:cover;background-position:center}
+.pin{position:absolute;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:2px solid #fff;color:#fff;font:700 12px/24px "Courier New",monospace;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.4);cursor:pointer}
+.pin.eat{background:#b5482f}.pin.want{background:#3f7d8c}.pin.sel{outline:3px solid #e8b923}
+</style>
+</head>
+<body>
+<div class="strip"></div>
+<header><h1 id="ttl">我们的胶片日记</h1><div class="sub" id="sub"></div></header>
+<nav id="nav"></nav>
+<main id="app"><p class="mut" style="text-align:center">冲洗胶卷中…</p></main>
+<button class="fab" id="fab" title="新增">+</button>
+<dialog id="dlg"></dialog>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const td=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const dd=s=>Math.round((new Date(s+'T00:00')-new Date(td()+'T00:00'))/864e5);
+const MO=['😢','😕','😐','🙂','🥰'];
+const T={
+ event:{n:'大事记',i:'📌',f:[['title','标题','t'],['date','日期','d'],['note','当时的故事','a'],['yearly','每年纪念（倒计时）','c']]},
+ diary:{n:'日记',i:'📖',f:[['date','日期','d'],['wx','天气','s',['☀️晴','⛅多云','🌧雨','❄️雪','🌙夜']],['title','标题','t'],['text','今天想说的','a']]},
+ photo:{n:'照片墙',i:'📷',f:[['date','日期','d'],['cap','配文','t'],['img','照片','p']]},
+ letter:{n:'情话信箱',i:'💌',f:[['title','写给TA的标题','t'],['text','想说的话','a'],['open','定时开启日期（可留空）','d']]},
+ plan:{n:'约会&心愿',i:'🎟️',f:[['kind','类型','s',['约会计划','心愿清单']],['title','内容','t'],['date','日期（可空）','d'],['done','已完成','c']]},
+ place:{n:'足迹',i:'🍜',f:[['kind','类型','s',['吃过','去过']],['name','店名/地点','t'],['city','城市','t'],['date','日期','d'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['note','感受','a']]},
+ mood:{n:'心情',i:'🌤️',f:[['date','日期','d'],['score','今天的心情','s',MO],['note','原因','a']]},
+ fight:{n:'吵架复盘',i:'🩹',f:[['date','日期','d'],['cause','因为什么','a'],['fix','怎么和好的','a'],['learn','下次怎么做','a']]},
+ food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a']]}
+};
+const NAV=[['home','🏠','首页'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片'],['letter','💌','信箱'],['plan','🎟️','计划'],['place','🍜','足迹'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘']];
+let items={},meta=null,tab='home',col=null,cur={},ready=false,warn='',H0='',uh='',myid='',placing=null,sel=null,ff='全部';
+const rec=t=>Object.entries(items).filter(([k,v])=>v.type===t).map(([k,v])=>({id:k,...v}));
+const dsort=a=>a.sort((x,y)=>(y.date||y.open||'')<(x.date||x.open||'')?-1:1);
+const who=()=>[meta&&meta.a||'我',meta&&meta.b||'TA'];
+const start=()=>meta&&meta.start;
+const dayN=d=>start()?Math.round((new Date(d+'T00:00')-new Date(start()+'T00:00'))/864e5)+1:null;
+
+function toast(m){const e=document.createElement('div');e.className='toast';e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
+async function save(id,d){items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
+async function del(id){delete items[id];render();if(col)try{await col.doc(id).delete()}catch(e){toast('删除失败')}}
+
+const CFG={url:"https://ojrtyldgmmdvzenqopov.supabase.co",key:"sb_publishable_Gm_LvG63Ku2suaNmV_5AWg_eDRwVbMT"};
+const LOGIN_EMAIL="love@our-diary.app";
+const CONFIGURED=!/粘贴/.test(CFG.url);
+let authed=false,poll=null,tok=null,loading=false;
+function saveTok(){try{if(tok)localStorage.setItem('sbtok',JSON.stringify(tok));else localStorage.removeItem('sbtok')}catch(e){}}
+async function api(path,opt={}){
+ const c=new AbortController(),t=setTimeout(()=>c.abort(),12000);
+ try{return await fetch(CFG.url+path,{...opt,signal:c.signal,headers:{apikey:CFG.key,'Content-Type':'application/json',...(opt.headers||{})}})}
+ finally{clearTimeout(t)}
+}
+async function authReq(grant,body){
+ const r=await api('/auth/v1/token?grant_type='+grant,{method:'POST',body:JSON.stringify(body)});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(j.error_description||j.msg||j.message||('HTTP '+r.status));
+ tok={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+(j.expires_in-60)*1000};saveTok();
+}
+async function bearer(){
+ if(!tok)throw new Error('未登录');
+ if(Date.now()>tok.exp){try{await authReq('refresh_token',{refresh_token:tok.refresh})}catch(e){if(e.name!=='AbortError'){tok=null;saveTok();apply(false)}throw e}}
+ return {Authorization:'Bearer '+tok.access};
+}
+async function rest(path,opt={}){
+ const h=await bearer();
+ const r=await api('/rest/v1/'+path,{...opt,headers:{...h,...(opt.headers||{})}});
+ if(!r.ok){let m='';try{m=(await r.json()).message}catch(e){}throw new Error(m||('HTTP '+r.status))}
+ return r.status===204?null:await r.json().catch(()=>null);
+}
+const shim={doc:id=>({
+ set:d=>rest('items?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id,data:d})}),
+ delete:()=>rest('items?id=eq.'+encodeURIComponent(id),{method:'DELETE'})})};
+async function loadAll(){
+ if(loading)return;loading=true;
+ const before=JSON.stringify(items),first=!ready;
+ try{const d=await rest('items?select=id,data');warn='';const n={};(d||[]).forEach(r=>n[r.id]=r.data);items=n;meta=items.meta||null}
+ catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
+ loading=false;ready=true;
+ if(first||before!==JSON.stringify(items))render();
+}
+function startSync(){col=shim;loadAll();poll=setInterval(loadAll,10000)}
+function stopSync(){if(poll){clearInterval(poll);poll=null}col=null;items={};meta=null}
+function apply(a){
+ if(a){if(poll)return;authed=true;startSync()}
+ else{authed=false;stopSync();ready=true;render()}
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&authed)loadAll()});
+(async()=>{
+ try{myid=localStorage.getItem('did')||'';if(!myid){myid=Math.random().toString(36).slice(2);localStorage.setItem('did',myid)}}catch(e){myid=myid||'d'+Math.random()}
+ if(!CONFIGURED){warn='尚未配置 Supabase，请按教程填写配置';ready=true;render();return}
+ try{tok=JSON.parse(localStorage.getItem('sbtok')||'null')}catch(e){tok=null}
+ apply(!!tok);
+})();
+
+function title(v){return v.type==='event'?v.title:v.type==='diary'?(v.title||(v.text||'').slice(0,18)):v.type==='photo'?(v.cap||'一张照片'):v.type==='place'?v.kind+'：'+v.name:v.type==='plan'?v.title+(v.done?' ✓':''):v.type==='fight'?(v.cause||'').slice(0,18):v.type==='mood'?'心情 '+(MO[v.score]||''):v.type==='food'?v.kind+'：'+v.name:''}
+
+function card(v){
+ const by=v.by?`<span class="tag">${esc(v.by)}</span>`:'';
+ const n=v.date&&dayN(v.date);
+ const dn=n?`<span class="mut">第${n}天</span>`:'';
+ const body=(...ks)=>ks.map(k=>v[k]?`<div>${esc(v[k])}</div>`:'').join('');
+ let h='';
+ if(v.type==='event')h=`<h3>📌 ${esc(v.title)} ${v.yearly?'<span class="stamp">每年</span>':''}</h3><div class="mut">${esc(v.date)} ${dn}</div>${body('note')}`;
+ if(v.type==='diary')h=`<div class="row"><h3>${esc(v.wx||'')} ${esc(v.title||'日记')}</h3>${by}</div><div class="mut">${esc(v.date)} ${dn}</div><div style="white-space:pre-wrap">${esc(v.text)}</div>`;
+ if(v.type==='letter'){const lock=v.open&&dd(v.open)>0;h=`<div class="row"><h3>💌 ${esc(v.title)}</h3>${by}</div>`+(lock?`<div class="stamp">🔒 ${esc(v.open)} 才能拆开（还有${dd(v.open)}天）</div>`:`<div style="white-space:pre-wrap">${esc(v.text)}</div>`)}
+ if(v.type==='plan')h=`<div class="row"><h3>${v.done?'✅':'⬜'} ${esc(v.title)}</h3>${by}</div><span class="tag">${esc(v.kind)}</span><span class="mut">${esc(v.date||'')} ${v.date&&!v.done?(dd(v.date)>=0?'还有'+dd(v.date)+'天':'已过期'):''}</span>`;
+ if(v.type==='place')h=`<div class="row"><h3>${v.kind==='吃过'?'🍜':'📍'} ${esc(v.name)}</h3><span style="color:var(--acc)">${esc(v.star||'')}</span></div><div class="mut">${esc(v.city||'')} ${esc(v.date||'')} ${by}</div>${body('note')}`;
+ if(v.type==='mood')h=`<div class="row"><h3>${MO[v.score]||''} ${esc(v.date)}</h3>${by}</div>${body('note')}`;
+ if(v.type==='fight')h=`<div class="row"><h3>🩹 ${esc(v.date)}</h3>${by}</div><div><b>起因：</b>${esc(v.cause)}</div><div><b>和好：</b>${esc(v.fix)}</div><div><b>下次：</b>${esc(v.learn)}</div>`;
+ if(v.type==='food')h=`<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null?'📍已标记':'（未标记地图位置）'} ${by}</div>${body('note')}`;
+ return `<div class="card" onclick="openForm('${v.type}','${v.id}')">${h}</div>`;
+}
+
+function view(){
+ if(!meta)return `<div class="card static"><h3>🎞️ 先装上胶卷</h3><label>你的昵称</label><input id="sa"><label>TA 的昵称</label><input id="sb"><label>在一起的日期</label><input id="ss" type="date" value="${td()}"><p><button class="btn" onclick="setup()">开始记录</button></p></div>`;
+ if(tab==='home')return home();
+ if(tab==='tl'){const a=dsort(Object.entries(items).filter(([k,v])=>v.type&&v.type!=='letter'&&(v.date)).map(([k,v])=>({id:k,...v})));
+  return a.length?`<div class="tl">${a.map(v=>`<div class="it" onclick="openForm('${v.type}','${v.id}')"><div class="mut">${esc(v.date)} · 第${dayN(v.date)}天</div><div>${T[v.type].i} ${esc(title(v))}</div></div>`).join('')}</div>`:empty()}
+ if(tab==='food')return foodView();
+ const a=dsort(rec(tab));
+ if(!a.length)return empty();
+ if(tab==='photo')return `<div class="grid">${a.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="">`:''}<p>${esc(v.cap||'')}<br><span class="mut">${esc(v.date||'')}</span></p></div>`).join('')}</div>`;
+ let extra='';
+ if(tab==='place'){const c=new Set(a.map(v=>v.city).filter(Boolean)).size;extra=`<div class="card static" style="text-align:center">🍜 吃过 <b>${a.filter(v=>v.kind==='吃过').length}</b> 家 · 📍 去过 <b>${a.filter(v=>v.kind==='去过').length}</b> 处 · 🏙️ <b>${c}</b> 座城市</div>`}
+ if(tab==='plan'){const w=a.filter(v=>v.kind==='心愿清单');extra=`<div class="card static" style="text-align:center">心愿完成进度 <b>${w.filter(v=>v.done).length}/${w.length}</b></div>`}
+ if(tab==='fight')extra=`<div class="card static mut">共 ${a.length} 次复盘。吵架不可怕，把下次怎么做写下来，就是在一起的成长。</div>`;
+ return extra+a.map(card).join('');
+}
+const empty=()=>`<p class="mut" style="text-align:center;padding:40px 0">还是一卷空白胶片，点右下角 + 记下第一张</p>`;
+
+function home(){
+ const n=dayN(td()),ms=[100,200,300,365,500,520,666,730,1000,1314,1500,2000,3000];
+ const nx=ms.find(m=>m>n);
+ let cd=[];
+ const st=start();
+ const nextAnn=ds=>{const [y,m,d]=ds.split('-').map(Number),t=new Date(td()+'T00:00');let x=new Date(t.getFullYear(),m-1,d);if(x<t)x=new Date(t.getFullYear()+1,m-1,d);return Math.round((x-t)/864e5)};
+ cd.push({t:'在一起纪念日',d:nextAnn(st),y:true});
+ rec('event').forEach(v=>{if(!v.date)return;const d=v.yearly?nextAnn(v.date):dd(v.date);if(d>=0)cd.push({t:v.title,d,y:v.yearly})});
+ rec('plan').forEach(v=>{if(v.date&&!v.done&&dd(v.date)>=0)cd.push({t:'🎟️ '+v.title,d:dd(v.date)})});
+ cd.sort((a,b)=>a.d-b.d);
+ const md=td().slice(5),ago=Object.entries(items).filter(([k,v])=>v.date&&v.type&&v.date.slice(5)===md&&v.date<td()).map(([k,v])=>({id:k,...v}));
+ const ps=rec('place');
+ return `<div class="card static hero"><div class="mut">${esc(who()[0])} ♥ ${esc(who()[1])}</div><div class="big">${n}</div><div>天 · 一起走过</div>${nx?`<p class="mut">距离第 ${nx} 天还有 ${nx-n} 天</p>`:''}</div>
+ <div class="card static"><h3>⏳ 倒计时</h3>${cd.slice(0,5).map(c=>`<div class="row"><span>${esc(c.t)} ${c.y?'<span class="tag">每年</span>':''}</span><b style="color:var(--acc)">${c.d===0?'就是今天！':c.d+' 天'}</b></div>`).join('')}</div>
+ ${ago.length?`<div class="card static"><h3>🕰️ 那年今日</h3>${ago.map(v=>`<div onclick="openForm('${v.type}','${v.id}')">${T[v.type].i} ${esc(v.date)} ${esc(title(v))}</div>`).join('')}</div>`:''}
+ <div class="card static"><h3>🎲 回忆盲盒</h3><div id="box" class="mut">随机抽一段你们的回忆</div><p><button class="btn o" onclick="blind()">抽一张</button></p></div>
+ ${moodChart()}
+ <div class="card static"><h3>📊 我们的数据</h3>日记 ${rec('diary').length} 篇 · 照片 ${rec('photo').length} 张 · 情话 ${rec('letter').length} 封 · 足迹 ${ps.length} 处 · 复盘 ${rec('fight').length} 次</div>
+ <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改密码</button></p>`;
+}
+function moodChart(){
+ const a=dsort(rec('mood')).reverse().slice(-14);
+ if(a.length<2)return '';
+ const cols=['#b5482f','#3f7d8c'],W=300,H=80;
+ const ln=who().map((nm,j)=>{const p=a.filter(v=>v.by===nm);if(p.length<2)return '';const pts=p.map(v=>`${(a.indexOf(v)/(a.length-1))*W},${H-(v.score/4)*(H-10)-5}`).join(' ');return `<polyline points="${pts}" fill="none" stroke="${cols[j]}" stroke-width="2"/>`}).join('');
+ return `<div class="card static"><h3>🌤️ 心情走势</h3><svg viewBox="0 0 ${W} ${H}" width="100%"><line x1="0" x2="${W}" y1="${H/2}" y2="${H/2}" stroke="var(--line)" stroke-dasharray="3"/>${ln}</svg><div class="mut"><span style="color:${cols[0]}">━ ${esc(who()[0])}</span>　<span style="color:${cols[1]}">━ ${esc(who()[1])}</span></div></div>`;
+}
+function blind(){
+ const a=Object.values(items).filter(v=>['diary','photo','place','event'].includes(v.type));
+ if(!a.length){$('#box').textContent='还没有回忆可抽，先去记录吧';return}
+ const v=a[Math.floor(Math.random()*a.length)];
+ $('#box').innerHTML=`<div style="color:var(--ink)"><b>${T[v.type].i} ${esc(v.date||'')}</b><br>${v.type==='photo'&&v.img?`<img src="${v.img}" style="width:60%;filter:sepia(.35)" alt="">`:''}${esc(title(v))}<br>${esc(v.text||v.note||'')}</div>`;
+}
+function setup(edit){
+ const a=edit?meta:{},A=$('#sa')?$('#sa').value:'',B=$('#sb')?$('#sb').value:'',S=$('#ss')?$('#ss').value:'';
+ if(edit===1){$('#app').innerHTML=`<div class="card static"><h3>修改信息</h3><label>你的昵称</label><input id="sa" value="${esc(meta.a)}"><label>TA 的昵称</label><input id="sb" value="${esc(meta.b)}"><label>在一起的日期</label><input id="ss" type="date" value="${esc(meta.start)}"><p><button class="btn" onclick="setup()">保存</button></p></div>`;return}
+ if(!A||!B||!S){toast('请填写完整');return}
+ save('meta',{a:A,b:B,start:S});
+}
+
+function render(){
+ if(!ready)return;
+ if(!unlockedNow()){$('#nav').innerHTML='';$('#fab').style.display='none';$('#sub').textContent=warn||'LOCKED';$('#ttl').textContent='我们的胶片日记';$('#app').innerHTML=`<div class="card static" style="text-align:center"><h3>🔒 输入密码</h3><input id="pwi" type="password" inputmode="numeric" onkeydown="if(event.key==='Enter')unlock()"><p><button class="btn" onclick="unlock()">打开我们的日记</button></p></div>`;return}
+ $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${i} ${n}</button>`).join('');
+ $('#ttl').textContent=meta?`${meta.a} & ${meta.b}`:'我们的胶片日记';
+ $('#sub').textContent=warn||(meta?'SINCE '+meta.start:'LOVE FILM JOURNAL');
+ $('#fab').style.display=meta&&tab!=='home'?'':'none';
+ $('#app').innerHTML=pwBanner()+view();
+}
+function go(k){tab=k;render();scrollTo(0,0)}
+$('#fab').onclick=()=>openForm(tab==='tl'?'event':tab);
+
+function openForm(type,id,pos){
+ const t=T[type],d=id?items[id]:{};cur={type,id,img:d.img||'',x:d.x!=null?d.x:(pos&&pos.x),y:d.y!=null?d.y:(pos&&pos.y)};
+ const f=t.f.map(([k,l,kind,o])=>{
+  const v=d[k]!==undefined?d[k]:(kind==='d'&&k==='date'?td():'');
+  if(kind==='t')return `<label>${l}</label><input data-k="${k}" value="${esc(v)}">`;
+  if(kind==='a')return `<label>${l}</label><textarea data-k="${k}">${esc(v)}</textarea>`;
+  if(kind==='d')return `<label>${l}</label><input type="date" data-k="${k}" value="${esc(v)}">`;
+  if(kind==='c')return `<label><input type="checkbox" data-k="${k}" ${v?'checked':''}> ${l}</label>`;
+  if(kind==='s')return `<label>${l}</label><select data-k="${k}" data-s="1">${o.map((x,i)=>`<option value="${i}" ${(k==='score'?String(v===''?3:v)===String(i):v===x)?'selected':''}>${x}</option>`).join('')}</select>`;
+  if(kind==='p')return `<label>${l}</label><input type="file" accept="image/*" onchange="pick(this)"><img id="pv" src="${cur.img}" style="width:100%;margin-top:6px;${cur.img?'':'display:none'}" alt="">`;
+ }).join('');
+ let lastBy='';try{lastBy=localStorage.getItem('by')||''}catch(e){}
+ const by=d.by||lastBy||who()[0];
+ $('#dlg').innerHTML=`<h3>${t.i} ${id?'编辑':'新增'}${t.n}</h3><label>记录人</label><select id="by">${who().map(x=>`<option ${x===by?'selected':''}>${esc(x)}</option>`).join('')}</select>${f}<p style="display:flex;gap:8px;justify-content:space-between"><span>${id?'<button class="btn o" onclick="rm()">删除</button>':''}</span><span><button class="btn o" onclick="$(\'#dlg\').close()">取消</button> <button class="btn" onclick="submit()">保存</button></span></p>`;
+ $('#dlg').showModal();
+}
+function pick(el){
+ const fl=el.files[0];if(!fl)return;
+ const im=new Image();im.onload=()=>{
+  let w=640,q=.7,u;const c=document.createElement('canvas');
+  do{const s=Math.min(1,w/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);u=c.toDataURL('image/jpeg',q);w*=.85;q*=.92}while(u.length>150000&&w>200);
+  cur.img=u;const p=$('#pv');p.src=u;p.style.display='block'};
+ im.src=URL.createObjectURL(fl);
+}
+function submit(){
+ const t=T[cur.type],o={type:cur.type,by:$('#by').value};
+ try{localStorage.setItem('by',o.by)}catch(e){}
+ document.querySelectorAll('#dlg [data-k]').forEach(e=>{const k=e.dataset.k;o[k]=e.type==='checkbox'?e.checked:e.dataset.s?(k==='score'||k==='star'?Number(e.value):t.f.find(x=>x[0]===k)[3][e.value]):e.value});
+ if(cur.type==='star')return;
+ if(cur.type==='photo')o.img=cur.img;
+ if(cur.type==='place'||cur.type==='food')o.star=['★','★★','★★★','★★★★','★★★★★'][o.star];
+ if(cur.type==='food'&&cur.x!=null){o.x=cur.x;o.y=cur.y}
+ if(cur.type==='food'&&!o.name){toast('请填写店名');return}
+ if(t.f.some(x=>x[0]==='title')&&cur.type!=='diary'&&!o.title&&cur.type!=='plan'){toast('请填写标题');return}
+ if(cur.type==='photo'&&!o.img){toast('请选择照片');return}
+ $('#dlg').close();
+ save(cur.id||Date.now().toString(36)+Math.random().toString(36).slice(2,5),o);
+}
+function rm(){if(confirm('确定删除这条记录吗？')){$('#dlg').close();del(cur.id)}}
+function foodView(){
+ const all=rec('food'),a=dsort(all.filter(v=>ff==='全部'||v.kind===ff));
+ const eaten=all.filter(v=>v.kind==='吃过'),rated=eaten.filter(v=>v.star);
+ const avg=rated.length?(rated.reduce((s,v)=>s+v.star.length,0)/rated.length).toFixed(1):'-';
+ const top=[...rated].sort((x,y)=>y.star.length-x.star.length).slice(0,3);
+ const bg=items.mapbg&&items.mapbg.img;
+ const pins=a.filter(v=>v.x!=null).map(v=>`<div class="pin ${v.kind==='吃过'?'eat':'want'} ${sel===v.id?'sel':''}" style="left:${v.x}%;top:${v.y}%" onclick="event.stopPropagation();selPin('${v.id}')">${v.kind==='吃过'?(v.star?v.star.length:'✓'):'想'}</div>`).join('');
+ const s=sel&&items[sel];
+ return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★${top.length?`<div class="mut">🏆 ${top.map(v=>esc(v.name)+' '+v.star).join(' ｜ ')}</div>`:''}</div>
+ <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}<button class="btn o" onclick="placing='new';render()">📍 点地图添加</button><button class="btn o" onclick="mapBg()">🖼️ 地图底图</button></div>
+ ${placing?`<p style="color:var(--acc)">👆 在地图上点一下选择位置 <a href="#" onclick="placing=null;render();return false">取消</a></p>`:''}
+ <div class="map" style="${bg?`background-image:url(${bg});`:''}${placing?'cursor:crosshair;outline:3px dashed var(--acc)':''}" onclick="mapTap(event)">${pins}${!bg&&!all.length?'<div class="mut" style="padding:16px">先点“地图底图”上传一张城市地图截图，再点“点地图添加”放置店铺</div>':''}</div>
+ <p class="mut">红色=吃过（数字=星数），蓝色=想吃。点圆点查看详情。</p>
+ ${s?card({...s,id:sel})+`<p><button class="btn o" onclick="placing='${sel}';render()">重新定位</button> ${s.kind==='想吃'?`<button class="btn" onclick="ate('${sel}')">我们吃到啦</button>`:''}</p>`:''}
+ ${a.length?a.map(card).join(''):empty()}`;
+}
+function mapTap(e){
+ if(!placing)return;
+ const r=e.currentTarget.getBoundingClientRect();
+ const x=+((e.clientX-r.left)/r.width*100).toFixed(1),y=+((e.clientY-r.top)/r.height*100).toFixed(1);
+ const p=placing;placing=null;
+ if(p==='new')openForm('food',null,{x,y});else{save(p,{...items[p],x,y})}
+}
+function selPin(id){sel=sel===id?null:id;render()}
+function ate(id){save(id,{...items[id],kind:'吃过',date:td()}).then(()=>openForm('food',id))}
+function mapBg(){
+ const i=document.createElement('input');i.type='file';i.accept='image/*';
+ i.onchange=()=>{const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{let w=1000,q=.7,u;const c=document.createElement('canvas');do{const s=Math.min(1,w/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);u=c.toDataURL('image/jpeg',q);w*=.85;q*=.9}while(u.length>200000&&w>300);save('mapbg',{img:u})};im.src=URL.createObjectURL(f)};
+ i.click();
+}
+function unlockedNow(){return authed}
+async function unlock(){
+ if(!CONFIGURED){toast(warn||'尚未配置');return}
+ toast('登录中…');
+ try{await authReq('password',{email:LOGIN_EMAIL,password:$('#pwi').value});apply(true)}
+ catch(e){toast(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':'登录失败：'+e.message)}
+}
+function pwBanner(){
+ const r=items.pwreq;if(!r)return '';
+ if(r.by===myid)return `<div class="card static"><b>🔑 已申请修改密码</b>，等待对方同意。<p><button class="btn o" onclick="pwDecide(0)">撤回申请</button></p></div>`;
+ return `<div class="card static"><b>🔑 ${esc(r.name||'对方')} 申请把密码改为：</b> <span class="stamp">${esc(r.pw)}</span><p>是否同意？同意后，下次登录需使用新密码。</p><p><button class="btn" onclick="pwDecide(1)">同意</button> <button class="btn o" onclick="pwDecide(0)">拒绝</button></p></div>`;
+}
+async function setPw(pw){
+ const h=await bearer();
+ const r=await api('/auth/v1/user',{method:'PUT',headers:h,body:JSON.stringify({password:pw})});
+ if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.msg||j.message||('HTTP '+r.status))}
+}
+async function pwDecide(ok){
+ const r=items.pwreq;if(!r)return;
+ if(ok&&r.by!==myid){
+  try{await setPw(r.pw)}catch(e){toast('修改失败：'+(e.code||e.message));return}
+  toast('已同意，密码已更新');
+ }
+ await del('pwreq');
+}
+function pwForm(){
+ $('#dlg').innerHTML=`<h3>🔑 申请修改密码</h3><label>新密码（至少6位）</label><input id="np1" type="password"><label>再输一次</label><input id="np2" type="password"><p class="mut">提交后需要对方点“同意”才会生效，对方会在页面上看到新密码。</p><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">取消</button> <button class="btn" onclick="pwSubmit()">提交申请</button></p>`;
+ $('#dlg').showModal();
+}
+async function pwSubmit(){
+ const a=$('#np1').value;if(a.length<6){toast('至少6位');return}
+ if(a!==$('#np2').value){toast('两次输入不一致');return}
+ let nm='';try{nm=localStorage.getItem('by')||''}catch(e){}
+ $('#dlg').close();
+ await save('pwreq',{pw:a,by:myid,name:nm||who()[0],at:Date.now()});
+ toast('已提交，等待对方同意');
+}
+function exportData(){
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(items,null,1)],{type:'application/json'}));a.download='love-journal-backup.json';a.click();
+}
+</script>
+</body></html>
