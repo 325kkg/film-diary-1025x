@@ -2,6 +2,7 @@
 <html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>我们的胶片日记</title>
+<meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#3b2f25">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -137,6 +138,7 @@ async function loadAll(){
    ((await rest(q))||[]).forEach(r=>{items[r.id]=r.data;vers[r.id]=r.updated_at});changed=true;
   }
   meta=items.meta||null;warn='';
+  if(items.cfg&&items.cfg.key){AMAP.key=items.cfg.key;AMAP.sec=items.cfg.sec}
  }catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
  loading=false;ready=true;if(changed)render();
 }
@@ -298,7 +300,7 @@ function foodViewOld(){
  ${s?card({...s,id:sel})+`<p><button class="btn o" onclick="placing='${sel}';render()">重新定位</button> ${s.kind==='想吃'?`<button class="btn" onclick="ate('${sel}')">我们吃到啦</button>`:''}</p>`:''}
  ${a.length?a.map(card).join(''):empty()}`;
 }
-const AMAP={key:"4273ea599c6c4704288dd921b97e202e",sec:"4ccb0941f2f333c3abb955191fac9b05"};
+let AMAP={key:"",sec:""};
 let amap=null,mEl=null,mks=[],amapState=0,sres=[],lastQ='',fit=0;
 function loadAMap(){
  if(amapState)return;amapState=1;
