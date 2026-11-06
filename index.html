@@ -80,7 +80,7 @@ const T={
  place:{n:'足迹',i:'🍜',f:[['kind','类型','s',['吃过','去过']],['name','店名/地点','t'],['city','城市','t'],['date','日期','d'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['note','感受','a']]},
  mood:{n:'心情',i:'🌤️',f:[['date','日期','d'],['score','今天的心情','s',MO],['note','原因','a']]},
  fight:{n:'吵架复盘',i:'🩹',f:[['date','日期','d'],['cause','因为什么','a'],['fix','怎么和好的','a'],['learn','下次怎么做','a']]},
- food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['addr','地址','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a']]}
+ food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['addr','地址','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a'],['img','店铺照片（可选）','p']]}
 };
 const NAV=[['home','🏠','首页'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片'],['letter','💌','信箱'],['plan','🎟️','计划'],['place','🍜','足迹'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘']];
 let items={},meta=null,tab='home',col=null,cur={},ready=false,warn='',H0='',uh='',myid='',placing=null,sel=null,ff='全部';
@@ -171,7 +171,7 @@ function card(v){
  if(v.type==='place')h=`<div class="row"><h3>${v.kind==='吃过'?'🍜':'📍'} ${esc(v.name)}</h3><span style="color:var(--acc)">${esc(v.star||'')}</span></div><div class="mut">${esc(v.city||'')} ${esc(v.date||'')} ${by}</div>${body('note')}`;
  if(v.type==='mood')h=`<div class="row"><h3>${MO[v.score]||''} ${esc(v.date)}</h3>${by}</div>${body('note')}`;
  if(v.type==='fight')h=`<div class="row"><h3>🩹 ${esc(v.date)}</h3>${by}</div><div><b>起因：</b>${esc(v.cause)}</div><div><b>和好：</b>${esc(v.fix)}</div><div><b>下次：</b>${esc(v.learn)}</div>`;
- if(v.type==='food')h=`<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(v.addr||'')} ${by}</div>${body('note')}<div style="margin-top:6px"><button class="btn o" onclick="event.stopPropagation();navApple('${v.id}')">🧭 Apple 地图导航</button> ${v.lng!=null?`<button class="btn o" onclick="event.stopPropagation();navAmap('${v.id}')">高德导航</button>`:''}</div>`;
+ if(v.type==='food')h=`${v.img?`<img src="${v.img}" alt="" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:6px;float:right;margin-left:8px">`:''}<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(v.addr||'')} ${by}</div>${body('note')}${navLinks(v)}`;
  return `<div class="card" onclick="openForm('${v.type}','${v.id}')">${h}</div>`;
 }
 
@@ -242,7 +242,7 @@ function render(){
  $('#app').innerHTML=pwBanner()+view();mountMap();
 }
 function go(k){tab=k;render();scrollTo(0,0)}
-$('#fab').onclick=()=>openForm(tab==='tl'?'event':tab);
+$('#fab').onclick=()=>{if(tab==='food'&&AMAP.key){const q=$('#sq');if(q){q.scrollIntoView({block:'center'});q.focus();return}}openForm(tab==='tl'?'event':tab)};
 
 function openForm(type,id,pos){
  const t=T[type],d=id?items[id]:((pos&&pos.pre)||{});cur={type,id,img:d.img||'',x:d.x!=null?d.x:(pos&&pos.x),y:d.y!=null?d.y:(pos&&pos.y),lng:d.lng!=null?d.lng:(pos&&pos.lng),lat:d.lat!=null?d.lat:(pos&&pos.lat)};
@@ -263,8 +263,8 @@ function openForm(type,id,pos){
 function pick(el){
  const fl=el.files[0];if(!fl)return;
  const im=new Image();im.onload=()=>{
-  let w=640,q=.7,u;const c=document.createElement('canvas');
-  do{const s=Math.min(1,w/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);u=c.toDataURL('image/jpeg',q);w*=.85;q*=.92}while(u.length>150000&&w>200);
+  let w=cur.type==='food'?480:640,q=.7,u;const c=document.createElement('canvas');
+  do{const s=Math.min(1,w/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);u=c.toDataURL('image/jpeg',q);w*=.85;q*=.92}while(u.length>(cur.type==='food'?80000:150000)&&w>200);
   cur.img=u;const p=$('#pv');p.src=u;p.style.display='block'};
  im.src=URL.createObjectURL(fl);
 }
@@ -273,7 +273,7 @@ function submit(){
  try{localStorage.setItem('by',o.by)}catch(e){}
  document.querySelectorAll('#dlg [data-k]').forEach(e=>{const k=e.dataset.k;o[k]=e.type==='checkbox'?e.checked:e.dataset.s?(k==='score'||k==='star'?Number(e.value):t.f.find(x=>x[0]===k)[3][e.value]):e.value});
  if(cur.type==='star')return;
- if(cur.type==='photo')o.img=cur.img;
+ if(cur.type==='photo'||cur.type==='food')o.img=cur.img;
  if(cur.type==='place'||cur.type==='food')o.star=['★','★★','★★★','★★★★','★★★★★'][o.star];
  if(cur.type==='food'&&cur.x!=null){o.x=cur.x;o.y=cur.y}
  if(cur.type==='food'&&cur.lng!=null){o.lng=cur.lng;o.lat=cur.lat}
@@ -305,20 +305,55 @@ let amap=null,mEl=null,mks=[],amapState=0,sres=[],lastQ='',fit=0;
 function loadAMap(){
  if(amapState)return;amapState=1;
  window._AMapSecurityConfig={securityJsCode:AMAP.sec};
- const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key+'&plugin=AMap.PlaceSearch';
+ const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key+'&plugin=AMap.PlaceSearch,AMap.AutoComplete,AMap.MarkerCluster';
  sc.onload=()=>{amapState=2;mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';amap=new AMap.Map(mEl,{zoom:12,resizeEnable:true});render()};
  sc.onerror=()=>{amapState=3;render()};
  document.head.appendChild(sc);
  setTimeout(()=>{if(amapState===1){amapState=3;render()}},12000);
 }
 function mountMap(){const e=$('#mapslot');if(e&&mEl){e.appendChild(mEl);drawMarkers()}}
+let cluster=null,tips=[],tmr=null;
+function pin(v,n){
+ const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
+ const lab=one?(eat?'★'+(v.star?v.star.length:''):'想吃'):n;
+ const im=v.img?`<img src="${v.img}" style="width:100%;height:100%;object-fit:cover;display:block">`:`<div style="font-size:26px;line-height:48px;text-align:center;background:#efe4cf;height:100%">${eat?'😋':'🤤'}</div>`;
+ return `<div style="position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid ${col}${sel===v.id&&one?';outline:3px solid #e8b923':''}"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div><div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 ${one?12:16}px sans-serif;text-shadow:0 1px 3px #000">${lab}</div><div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div>${one?`<div style="position:absolute;top:68px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(0,0,0,.65);color:#fff;padding:0 6px;border-radius:8px;font:11px sans-serif">${esc(v.name)}</div>`:''}</div>`;
+}
 function drawMarkers(){
- if(!amap)return;amap.remove(mks);mks=[];
- rec('food').filter(v=>v.lng!=null&&(ff==='全部'||v.kind===ff)).forEach(v=>{
-  const m=new AMap.Marker({position:[v.lng,v.lat],anchor:'center',content:`<div class="pin ${v.kind==='吃过'?'eat':'want'} ${sel===v.id?'sel':''}" style="position:static;transform:none">${v.kind==='吃过'?(v.star?v.star.length:'✓'):'想'}</div>`});
-  m.on('click',()=>selPin(v.id));mks.push(m)});
- amap.add(mks);
- if(!fit&&mks.length){amap.setFitView(mks);fit=1}
+ if(!amap)return;
+ const pts=rec('food').filter(v=>v.lng!=null&&(ff==='全部'||v.kind===ff)).map(v=>({lnglat:[v.lng,v.lat],id:v.id,v}));
+ if(cluster)cluster.setData(pts);
+ else{
+  cluster=new AMap.MarkerCluster(amap,pts,{gridSize:70,maxZoom:17,
+   renderClusterMarker:c=>{c.marker.setContent(pin(c.clusterData[0].v,c.count));c.marker.setOffset(new AMap.Pixel(-30,-70))},
+   renderMarker:c=>{c.marker.setContent(pin(c.data[0].v,0));c.marker.setOffset(new AMap.Pixel(-30,-70))}});
+  cluster.on('click',e=>{const d=e.clusterData||[];if(d.length>1)amap.setZoomAndCenter(Math.min(amap.getZoom()+2,18),e.lnglat||d[0].lnglat);else if(d[0])selPin(d[0].id)});
+ }
+ if(!fit&&pts.length){
+  fit=1;
+  if(pts.length===1)amap.setZoomAndCenter(15,pts[0].lnglat);
+  else{const a=pts.map(p=>p.lnglat[0]),b=pts.map(p=>p.lnglat[1]);amap.setBounds(new AMap.Bounds([Math.min(...a),Math.min(...b)],[Math.max(...a),Math.max(...b)]),false,[60,40,60,40])}
+ }
+}
+function tipInput(){
+ clearTimeout(tmr);
+ const q=($('#sq')||{}).value;
+ if(!q||!q.trim()||!window.AMap){const e=$('#tips');if(e)e.innerHTML='';return}
+ tmr=setTimeout(()=>{new AMap.AutoComplete({city:'全国'}).search(q.trim(),(st,r)=>{
+  tips=(st==='complete'&&r.tips?r.tips:[]).filter(t=>t.location&&t.location.lng!=null).slice(0,8);
+  const e=$('#tips');if(!e)return;
+  e.innerHTML=tips.map((t,i)=>`<div class="card" style="padding:8px 12px;margin:0 0 6px" onclick="pickTip(${i})"><b>${esc(t.name)}</b><div class="mut">${esc((t.district||'')+(typeof t.address==='string'?t.address:''))}</div></div>`).join('');
+ })},300);
+}
+function pickTip(i){
+ const t=tips[i];if(!t)return;tips=[];const e=$('#tips');if(e)e.innerHTML='';
+ openForm('food',null,{lng:t.location.lng,lat:t.location.lat,pre:{name:t.name,addr:(t.district||'')+(typeof t.address==='string'?t.address:''),kind:'想吃'}});
+}
+function navLinks(v){
+ const nm=encodeURIComponent(v.name||''),st='text-decoration:none;display:inline-block';
+ const ap=v.lng!=null?`maps://?daddr=${v.lat},${v.lng}&amp;dirflg=d`:`maps://?daddr=${encodeURIComponent((v.addr||'')+' '+(v.name||''))}&amp;dirflg=d`;
+ const am=v.lng!=null?` <a class="btn o" style="${st}" href="https://uri.amap.com/navigation?to=${v.lng},${v.lat},${nm}&amp;mode=car&amp;coordinate=gaode&amp;callnative=1" onclick="event.stopPropagation()">高德导航</a>`:'';
+ return `<div style="margin-top:6px;clear:both"><a class="btn o" style="${st}" href="${ap}" onclick="event.stopPropagation()">🧭 Apple 地图导航</a>${am}</div>`;
 }
 function searchShop(){
  lastQ=$('#sq').value.trim();if(!lastQ||!window.AMap)return;
@@ -340,8 +375,8 @@ function foodView(){
  const res=sres.map((p,i)=>`<div class="card" onclick="pickPoi(${i})"><b>${esc(p.name)}</b><div class="mut">${esc((p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''))}</div></div>`).join('');
  return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
  <div style="display:flex;gap:6px;margin-bottom:8px">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}</div>
- ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="搜店名，例如：海底捞 朝阳" value="${esc(lastQ)}" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div>${res}<div id="mapslot">${mEl?'':'<p class="mut">地图加载中…</p>'}</div>`}
- <p class="mut">红点=吃过（数字=星数），蓝点=想吃。点圆点查看详情和导航。</p>
+ ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div id="mapslot">${mEl?'':'<p class="mut">地图加载中…</p>'}</div>`}
+ <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p>
  ${s?card({...s,id:sel}):''}
  ${a.length?a.map(card).join(''):empty()}`;
 }
