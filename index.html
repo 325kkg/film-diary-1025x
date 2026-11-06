@@ -79,7 +79,7 @@ const T={
  place:{n:'足迹',i:'🍜',f:[['kind','类型','s',['吃过','去过']],['name','店名/地点','t'],['city','城市','t'],['date','日期','d'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['note','感受','a']]},
  mood:{n:'心情',i:'🌤️',f:[['date','日期','d'],['score','今天的心情','s',MO],['note','原因','a']]},
  fight:{n:'吵架复盘',i:'🩹',f:[['date','日期','d'],['cause','因为什么','a'],['fix','怎么和好的','a'],['learn','下次怎么做','a']]},
- food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a']]}
+ food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['addr','地址','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a']]}
 };
 const NAV=[['home','🏠','首页'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片'],['letter','💌','信箱'],['plan','🎟️','计划'],['place','🍜','足迹'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘']];
 let items={},meta=null,tab='home',col=null,cur={},ready=false,warn='',H0='',uh='',myid='',placing=null,sel=null,ff='全部';
@@ -121,17 +121,26 @@ async function rest(path,opt={}){
  return r.status===204?null:await r.json().catch(()=>null);
 }
 const shim={doc:id=>({
- set:d=>rest('items?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id,data:d})}),
+ set:d=>rest('items?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id,data:d,updated_at:new Date().toISOString()})}),
  delete:()=>rest('items?id=eq.'+encodeURIComponent(id),{method:'DELETE'})})};
+let vers={};
 async function loadAll(){
  if(loading)return;loading=true;
- const before=JSON.stringify(items),first=!ready;
- try{const d=await rest('items?select=id,data');warn='';const n={};(d||[]).forEach(r=>n[r.id]=r.data);items=n;meta=items.meta||null}
- catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
- loading=false;ready=true;
- if(first||before!==JSON.stringify(items))render();
+ let changed=!ready;
+ try{
+  const list=(await rest('items?select=id,updated_at'))||[];
+  const live=new Set(list.map(r=>r.id));
+  Object.keys(items).forEach(k=>{if(!live.has(k)){delete items[k];delete vers[k];changed=true}});
+  const ids=list.filter(r=>vers[r.id]!==r.updated_at||!(r.id in items)).map(r=>r.id);
+  if(ids.length){
+   const q=ids.length>30?'items?select=id,data,updated_at':'items?select=id,data,updated_at&id=in.('+ids.map(encodeURIComponent).join(',')+')';
+   ((await rest(q))||[]).forEach(r=>{items[r.id]=r.data;vers[r.id]=r.updated_at});changed=true;
+  }
+  meta=items.meta||null;warn='';
+ }catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
+ loading=false;ready=true;if(changed)render();
 }
-function startSync(){col=shim;loadAll();poll=setInterval(loadAll,10000)}
+function startSync(){vers={};col=shim;loadAll();poll=setInterval(()=>{if(!document.hidden)loadAll()},15000)}
 function stopSync(){if(poll){clearInterval(poll);poll=null}col=null;items={};meta=null}
 function apply(a){
  if(a){if(poll)return;authed=true;startSync()}
@@ -160,7 +169,7 @@ function card(v){
  if(v.type==='place')h=`<div class="row"><h3>${v.kind==='吃过'?'🍜':'📍'} ${esc(v.name)}</h3><span style="color:var(--acc)">${esc(v.star||'')}</span></div><div class="mut">${esc(v.city||'')} ${esc(v.date||'')} ${by}</div>${body('note')}`;
  if(v.type==='mood')h=`<div class="row"><h3>${MO[v.score]||''} ${esc(v.date)}</h3>${by}</div>${body('note')}`;
  if(v.type==='fight')h=`<div class="row"><h3>🩹 ${esc(v.date)}</h3>${by}</div><div><b>起因：</b>${esc(v.cause)}</div><div><b>和好：</b>${esc(v.fix)}</div><div><b>下次：</b>${esc(v.learn)}</div>`;
- if(v.type==='food')h=`<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null?'📍已标记':'（未标记地图位置）'} ${by}</div>${body('note')}`;
+ if(v.type==='food')h=`<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(v.addr||'')} ${by}</div>${body('note')}<div style="margin-top:6px"><button class="btn o" onclick="event.stopPropagation();navApple('${v.id}')">🧭 Apple 地图导航</button> ${v.lng!=null?`<button class="btn o" onclick="event.stopPropagation();navAmap('${v.id}')">高德导航</button>`:''}</div>`;
  return `<div class="card" onclick="openForm('${v.type}','${v.id}')">${h}</div>`;
 }
 
@@ -172,7 +181,7 @@ function view(){
  if(tab==='food')return foodView();
  const a=dsort(rec(tab));
  if(!a.length)return empty();
- if(tab==='photo')return `<div class="grid">${a.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="">`:''}<p>${esc(v.cap||'')}<br><span class="mut">${esc(v.date||'')}</span></p></div>`).join('')}</div>`;
+ if(tab==='photo')return `<div class="grid">${a.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.cap||'')}<br><span class="mut">${esc(v.date||'')}</span></p></div>`).join('')}</div>`;
  let extra='';
  if(tab==='place'){const c=new Set(a.map(v=>v.city).filter(Boolean)).size;extra=`<div class="card static" style="text-align:center">🍜 吃过 <b>${a.filter(v=>v.kind==='吃过').length}</b> 家 · 📍 去过 <b>${a.filter(v=>v.kind==='去过').length}</b> 处 · 🏙️ <b>${c}</b> 座城市</div>`}
  if(tab==='plan'){const w=a.filter(v=>v.kind==='心愿清单');extra=`<div class="card static" style="text-align:center">心愿完成进度 <b>${w.filter(v=>v.done).length}/${w.length}</b></div>`}
@@ -228,13 +237,13 @@ function render(){
  $('#ttl').textContent=meta?`${meta.a} & ${meta.b}`:'我们的胶片日记';
  $('#sub').textContent=warn||(meta?'SINCE '+meta.start:'LOVE FILM JOURNAL');
  $('#fab').style.display=meta&&tab!=='home'?'':'none';
- $('#app').innerHTML=pwBanner()+view();
+ $('#app').innerHTML=pwBanner()+view();mountMap();
 }
 function go(k){tab=k;render();scrollTo(0,0)}
 $('#fab').onclick=()=>openForm(tab==='tl'?'event':tab);
 
 function openForm(type,id,pos){
- const t=T[type],d=id?items[id]:{};cur={type,id,img:d.img||'',x:d.x!=null?d.x:(pos&&pos.x),y:d.y!=null?d.y:(pos&&pos.y)};
+ const t=T[type],d=id?items[id]:((pos&&pos.pre)||{});cur={type,id,img:d.img||'',x:d.x!=null?d.x:(pos&&pos.x),y:d.y!=null?d.y:(pos&&pos.y),lng:d.lng!=null?d.lng:(pos&&pos.lng),lat:d.lat!=null?d.lat:(pos&&pos.lat)};
  const f=t.f.map(([k,l,kind,o])=>{
   const v=d[k]!==undefined?d[k]:(kind==='d'&&k==='date'?td():'');
   if(kind==='t')return `<label>${l}</label><input data-k="${k}" value="${esc(v)}">`;
@@ -265,6 +274,7 @@ function submit(){
  if(cur.type==='photo')o.img=cur.img;
  if(cur.type==='place'||cur.type==='food')o.star=['★','★★','★★★','★★★★','★★★★★'][o.star];
  if(cur.type==='food'&&cur.x!=null){o.x=cur.x;o.y=cur.y}
+ if(cur.type==='food'&&cur.lng!=null){o.lng=cur.lng;o.lat=cur.lat}
  if(cur.type==='food'&&!o.name){toast('请填写店名');return}
  if(t.f.some(x=>x[0]==='title')&&cur.type!=='diary'&&!o.title&&cur.type!=='plan'){toast('请填写标题');return}
  if(cur.type==='photo'&&!o.img){toast('请选择照片');return}
@@ -272,7 +282,7 @@ function submit(){
  save(cur.id||Date.now().toString(36)+Math.random().toString(36).slice(2,5),o);
 }
 function rm(){if(confirm('确定删除这条记录吗？')){$('#dlg').close();del(cur.id)}}
-function foodView(){
+function foodViewOld(){
  const all=rec('food'),a=dsort(all.filter(v=>ff==='全部'||v.kind===ff));
  const eaten=all.filter(v=>v.kind==='吃过'),rated=eaten.filter(v=>v.star);
  const avg=rated.length?(rated.reduce((s,v)=>s+v.star.length,0)/rated.length).toFixed(1):'-';
@@ -288,6 +298,51 @@ function foodView(){
  ${s?card({...s,id:sel})+`<p><button class="btn o" onclick="placing='${sel}';render()">重新定位</button> ${s.kind==='想吃'?`<button class="btn" onclick="ate('${sel}')">我们吃到啦</button>`:''}</p>`:''}
  ${a.length?a.map(card).join(''):empty()}`;
 }
+const AMAP={key:"4273ea599c6c4704288dd921b97e202e",sec:"4ccb0941f2f333c3abb955191fac9b05"};
+let amap=null,mEl=null,mks=[],amapState=0,sres=[],lastQ='',fit=0;
+function loadAMap(){
+ if(amapState)return;amapState=1;
+ window._AMapSecurityConfig={securityJsCode:AMAP.sec};
+ const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key+'&plugin=AMap.PlaceSearch';
+ sc.onload=()=>{amapState=2;mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';amap=new AMap.Map(mEl,{zoom:12,resizeEnable:true});render()};
+ sc.onerror=()=>{amapState=3;render()};
+ document.head.appendChild(sc);
+ setTimeout(()=>{if(amapState===1){amapState=3;render()}},12000);
+}
+function mountMap(){const e=$('#mapslot');if(e&&mEl){e.appendChild(mEl);drawMarkers()}}
+function drawMarkers(){
+ if(!amap)return;amap.remove(mks);mks=[];
+ rec('food').filter(v=>v.lng!=null&&(ff==='全部'||v.kind===ff)).forEach(v=>{
+  const m=new AMap.Marker({position:[v.lng,v.lat],anchor:'center',content:`<div class="pin ${v.kind==='吃过'?'eat':'want'} ${sel===v.id?'sel':''}" style="position:static;transform:none">${v.kind==='吃过'?(v.star?v.star.length:'✓'):'想'}</div>`});
+  m.on('click',()=>selPin(v.id));mks.push(m)});
+ amap.add(mks);
+ if(!fit&&mks.length){amap.setFitView(mks);fit=1}
+}
+function searchShop(){
+ lastQ=$('#sq').value.trim();if(!lastQ||!window.AMap)return;
+ new AMap.PlaceSearch({pageSize:6}).search(lastQ,(st,r)=>{sres=st==='complete'&&r.poiList?r.poiList.pois:[];if(!sres.length)toast('没搜到，换个关键词或加上城市');render()});
+}
+function pickPoi(i){
+ const p=sres[i];sres=[];
+ openForm('food',null,{lng:p.location.lng,lat:p.location.lat,pre:{name:p.name,addr:(p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''),kind:'想吃'}});
+}
+function navApple(id){const v=items[id];location.href=v.lng!=null?`https://maps.apple.com/?daddr=${v.lat},${v.lng}&dirflg=d`:`https://maps.apple.com/?daddr=${encodeURIComponent((v.addr||'')+' '+v.name)}&dirflg=d`}
+function navAmap(id){const v=items[id];if(v.lng==null)return;location.href=`https://uri.amap.com/navigation?to=${v.lng},${v.lat},${encodeURIComponent(v.name)}&mode=car&coordinate=gaode&callnative=1`}
+function foodView(){
+ if(!(AMAP.key&&AMAP.sec))return foodViewOld();
+ loadAMap();
+ const all=rec('food'),a=dsort(all.filter(v=>ff==='全部'||v.kind===ff));
+ const eaten=all.filter(v=>v.kind==='吃过'),rated=eaten.filter(v=>v.star);
+ const avg=rated.length?(rated.reduce((t,v)=>t+v.star.length,0)/rated.length).toFixed(1):'-';
+ const s=sel&&items[sel];
+ const res=sres.map((p,i)=>`<div class="card" onclick="pickPoi(${i})"><b>${esc(p.name)}</b><div class="mut">${esc((p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''))}</div></div>`).join('');
+ return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
+ <div style="display:flex;gap:6px;margin-bottom:8px">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}</div>
+ ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="搜店名，例如：海底捞 朝阳" value="${esc(lastQ)}" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div>${res}<div id="mapslot">${mEl?'':'<p class="mut">地图加载中…</p>'}</div>`}
+ <p class="mut">红点=吃过（数字=星数），蓝点=想吃。点圆点查看详情和导航。</p>
+ ${s?card({...s,id:sel}):''}
+ ${a.length?a.map(card).join(''):empty()}`;
+}
 function mapTap(e){
  if(!placing)return;
  const r=e.currentTarget.getBoundingClientRect();
@@ -295,7 +350,7 @@ function mapTap(e){
  const p=placing;placing=null;
  if(p==='new')openForm('food',null,{x,y});else{save(p,{...items[p],x,y})}
 }
-function selPin(id){sel=sel===id?null:id;render()}
+function selPin(id){sel=sel===id?null:id;render();const v=items[id];if(amap&&v&&v.lng!=null&&sel===id)amap.setCenter([v.lng,v.lat])}
 function ate(id){save(id,{...items[id],kind:'吃过',date:td()}).then(()=>openForm('food',id))}
 function mapBg(){
  const i=document.createElement('input');i.type='file';i.accept='image/*';
