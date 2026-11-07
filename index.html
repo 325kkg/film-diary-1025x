@@ -68,6 +68,7 @@ textarea{min-height:80px}
 .tld{font:11px "Courier New",monospace;color:var(--mut)}.tlt{font-size:13px;word-break:break-all}
 .locb{position:absolute;top:10px;right:10px;z-index:30;width:40px;height:40px;border-radius:50%;border:0;background:#fff;color:#2f7df6;font-size:22px;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer}
 .mapph{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--card);border:2px solid var(--ink);border-radius:4px;color:var(--mut)}
+.zb{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}.zb button{width:36px;height:36px;border-radius:50%;border:0;background:#fff;color:#3b2f25;font-size:18px;box-shadow:0 2px 5px rgba(0,0,0,.35)}
 </style>
 </head>
 <body>
@@ -272,7 +273,7 @@ function openForm(type,id,pos){
  const by=d.by||lastBy||who()[0];
  $('#dlg').innerHTML=`<h3>${t.i} ${id?'编辑':'新增'}${t.n}</h3><label>记录人</label><select id="by">${who().map(x=>`<option ${x===by?'selected':''}>${esc(x)}</option>`).join('')}</select>${f}<p style="display:flex;gap:8px;justify-content:space-between"><span>${id?'<button class="btn o" onclick="rm()">删除</button>':''}</span><span><button class="btn o" onclick="$(\'#dlg\').close()">取消</button> <button class="btn" onclick="submit()">保存</button></span></p>`;
  $('#dlg').showModal();
- if(type==='photo'){cur.prov=d.prov||'';cur.time=d.time||'';const pe=document.querySelector('#dlg [data-k=place]');if(pe)pe.onchange=()=>geoPlace(pe.value)}
+ if(type==='photo'){cur.prov=d.prov||'';cur.time=d.time||'';cur.ad=d.ad||'';cur.dist=d.dist||'';cur.poi=d.poi||'';cur.fn=d.fn||'';const pe=document.querySelector('#dlg [data-k=place]');if(pe)pe.onchange=()=>geoPlace(pe.value)}
 }
 function pick(el){
  const fl=el.files[0];if(!fl)return;if(cur.type==='photo')readMeta(fl);
@@ -291,7 +292,7 @@ function submit(){
  if(cur.type==='place'||cur.type==='food')o.star=['★','★★','★★★','★★★★','★★★★★'][o.star];
  if(cur.type==='food'&&cur.x!=null){o.x=cur.x;o.y=cur.y}
  if((cur.type==='food'||cur.type==='photo')&&cur.lng!=null){o.lng=cur.lng;o.lat=cur.lat}
- if(cur.type==='photo'){o.prov=cur.prov||'';o.time=cur.time||''}
+ if(cur.type==='photo'){o.prov=cur.prov||'';o.time=cur.time||'';o.ad=cur.ad||'';o.dist=cur.dist||'';o.poi=cur.poi||'';o.fn=cur.fn||''}
  if(cur.type==='food'&&!o.name){toast('请填写店名');return}
  if(t.f.some(x=>x[0]==='title')&&cur.type!=='diary'&&!o.title&&cur.type!=='plan'){toast('请填写标题');return}
  if(cur.type==='photo'&&!o.img){toast('请选择照片');return}
@@ -476,65 +477,114 @@ function exif(buf){
 function amReady(cb,n=40){if(window.AMap&&plugReady)cb();else if(n>0)setTimeout(()=>amReady(cb,n-1),250);else toast('地图组件还没加载好，位置暂时无法识别')}
 function fillPlace(lng,lat){
  cur.lng=lng;cur.lat=lat;
- new AMap.Geocoder().getAddress([lng,lat],(st,r)=>{
-  const a=st==='complete'&&r.regeocode?r.regeocode.addressComponent:null;
-  cur.prov=a&&a.province?(typeof a.province==='string'?a.province:''):'境外';
+ new AMap.Geocoder({radius:300,extensions:'all'}).getAddress([lng,lat],(st,r)=>{
+  const g=st==='complete'&&r.regeocode?r.regeocode:null,a=g&&g.addressComponent;
+  if(!a){cur.prov='境外';return}
+  const city=(typeof a.city==='string'&&a.city)||a.province||'';
+  const poi=(g.aois&&g.aois[0]&&g.aois[0].name)||(g.pois&&g.pois[0]&&g.pois[0].name)||'';
+  cur.prov=typeof a.province==='string'?a.province:'';cur.ad=a.adcode||'';cur.dist=a.district||'';cur.poi=poi;
   const pe=document.querySelector('#dlg [data-k=place]');
-  if(pe&&a&&!pe.value)pe.value=((typeof a.city==='string'&&a.city)||a.province||'')+(a.district||'');
+  if(pe)pe.value=city+(a.district||'')+(a.township||'')+(poi?' · '+poi:'');
  });
 }
 async function readMeta(f){
  const x=exif(await f.arrayBuffer());
  const d=x.dt?x.dt.slice(0,10).replace(/:/g,'-'):new Date(f.lastModified-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
  const de=document.querySelector('#dlg [data-k=date]');if(de)de.value=d;
- cur.time=x.dt||'';
+ cur.time=x.dt||'';cur.fn=f.name||'';
  if(x.lat==null){toast('这张照片没有带位置信息，请在“地点”里手动填写');return}
  amReady(()=>AMap.convertFrom([x.lng,x.lat],'gps',(st,r)=>{if(r&&r.info==='ok'&&r.locations&&r.locations[0])fillPlace(r.locations[0].lng,r.locations[0].lat);else fillPlace(x.lng,x.lat)}));
 }
 function geoPlace(t){
  t=(t||'').trim();if(!t)return;
  amReady(()=>new AMap.Geocoder().getLocation(t,(st,r)=>{
-  if(st==='complete'&&r.geocodes&&r.geocodes[0]){const g=r.geocodes[0];cur.lng=g.location.lng;cur.lat=g.location.lat;cur.prov=typeof g.addressComponent.province==='string'?g.addressComponent.province:'';toast('已定位到：'+g.formattedAddress)}
+  if(st==='complete'&&r.geocodes&&r.geocodes[0]){const g=r.geocodes[0];cur.lng=g.location.lng;cur.lat=g.location.lat;cur.prov=typeof g.addressComponent.province==='string'?g.addressComponent.province:'';cur.ad=g.addressComponent.adcode||'';cur.dist=g.addressComponent.district||'';cur.poi='';toast('已定位到：'+g.formattedAddress)}
   else toast('没找到这个地点，可以换个写法')}));
 }
-let cn=null,cnBusy=false;
-function loadCN(){
- if(cn||cnBusy||!window.AMap||!AMap.DistrictSearch)return;
- try{cn=JSON.parse(localStorage.getItem('cnmap')||'null')}catch(e){}
- if(cn){render();return}
+const X0=73.3,YT=53.7,CC=.8131,KK=11.9,OX=200,OY=335;
+const PX=(a,b)=>[(a-X0)*CC*KK+OX,(YT-b)*KK+OY];
+let provs=[],cities={},cityBusy={},cnBusy=false,cnProg=0;
+const dsP=(kw,sub,ext)=>new Promise(r=>new AMap.DistrictSearch({subdistrict:sub,extensions:ext}).search(kw,(st,res)=>r(st==='complete'&&res.districtList&&res.districtList[0]||null)));
+function rp(bs,st){return bs.map(g=>{if(!g.some(p=>p.lat>17.6))return '';const o=[];let l=null;g.forEach((p,i)=>{if(!l||Math.hypot(p.lng-l.lng,p.lat-l.lat)>=st||i===g.length-1){const q=PX(p.lng,p.lat);o.push(q[0].toFixed(1)+','+q[1].toFixed(1));l=p}});return o.length>3?'M'+o.join('L')+'Z':''}).join('')}
+function bbox(bs){let a=1e9,b=1e9,c=-1e9,d=-1e9;bs.forEach(g=>g.forEach(p=>{if(p.lat<17.6)return;const q=PX(p.lng,p.lat);a=Math.min(a,q[0]);c=Math.max(c,q[0]);b=Math.min(b,q[1]);d=Math.max(d,q[1])}));return [a,b,c,d]}
+async function loadCN(){
+ if(provs.length||cnBusy||!window.AMap||!AMap.DistrictSearch)return;
+ try{const c=JSON.parse(localStorage.getItem('cnp2')||'null');if(c&&c.length){provs=c;render();return}}catch(e){}
  cnBusy=true;
- new AMap.DistrictSearch({level:'country',subdistrict:0,extensions:'all'}).search('中国',(st,r)=>{
-  const b=r&&r.districtList&&r.districtList[0]&&r.districtList[0].boundaries;
-  if(!b||!b.length){cnBusy=false;return}
-  const rings=b.map(g=>{const o=[];let l=null;g.forEach((p,i)=>{if(!l||Math.hypot(p.lng-l[0],p.lat-l[1])>=.05||i===g.length-1){o.push([p.lng,p.lat]);l=[p.lng,p.lat]}});return o}).filter(g=>g.length>3);
-  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;rings.forEach(g=>g.forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])}));
-  const c=Math.cos((y0+y1)/2*Math.PI/180),k=600/Math.max((x1-x0)*c,y1-y0),w=(x1-x0)*c*k,h=(y1-y0)*k;
-  const d=rings.map(g=>'M'+g.map(p=>((p[0]-x0)*c*k).toFixed(1)+','+((y1-p[1])*k).toFixed(1)).join('L')+'Z').join('');
-  cn={d,x0,y0:y1,c,k,w,h};
-  try{localStorage.setItem('cnmap',JSON.stringify(cn))}catch(e){}
-  cnBusy=false;render();
- });
+ const top=await dsP('中国',1,'base');if(!top){cnBusy=false;return}
+ const list=top.districtList.filter(p=>p.adcode),out=[];
+ for(let i=0;i<list.length;i+=4){
+  await Promise.all(list.slice(i,i+4).map(async p=>{const d=await dsP(p.adcode,0,'all');if(d&&d.boundaries)out.push({n:p.name,a:String(p.adcode),d:rp(d.boundaries,.06),c:PX(p.center.lng,p.center.lat),bb:bbox(d.boundaries)})}));
+  cnProg=out.length;if(i%8===0)render();
+ }
+ provs=out;try{localStorage.setItem('cnp2',JSON.stringify(out))}catch(e){}
+ cnBusy=false;render();
+}
+async function loadCities(pa){
+ if(cities[pa]||cityBusy[pa]||!window.AMap||!AMap.DistrictSearch)return;
+ try{const c=JSON.parse(localStorage.getItem('cnc'+pa)||'null');if(c){cities[pa]=c;render();return}}catch(e){}
+ cityBusy[pa]=1;toast('正在加载更详细的地区…');
+ const top=await dsP(pa,1,'base'),list=top?top.districtList.filter(c=>c.adcode):[],out=[];
+ for(let i=0;i<list.length;i+=4)await Promise.all(list.slice(i,i+4).map(async c=>{const d=await dsP(c.adcode,0,'all');if(d&&d.boundaries)out.push({n:c.name,a:String(c.adcode),d:rp(d.boundaries,.02),c:PX(c.center.lng,c.center.lat)})}));
+ if(out.length){cities[pa]=out;try{localStorage.setItem('cnc'+pa,JSON.stringify(out))}catch(e){}}
+ cityBusy[pa]=0;render();
 }
 const SL=[[40,30],[230,30],[420,30],[610,30],[800,30],[40,880],[230,880],[420,880],[610,880],[800,880],[15,270],[15,470],[15,670],[825,270],[825,470],[825,670]];
+let vb=[0,0,1000,1100],ptrs=new Map(),lodT=null,dragMoved=false;
+function lod(sv){const z=1000/vb[2],lc=sv.querySelector('#lc');
+ if(lc)lc.style.display=z>=2.4?'':'none';
+ sv.querySelectorAll('.pinc').forEach(c=>c.setAttribute('r',9/Math.sqrt(z)));
+ sv.querySelectorAll('.plb').forEach(t=>{t.setAttribute('font-size',24/z);t.style.display=z<4?'':'none'});
+ sv.querySelectorAll('.clb').forEach(t=>t.setAttribute('font-size',22/z));
+ sv.style.touchAction=vb[2]<999?'none':'pan-y'}
+function setVB(n,sv){const w=Math.min(1000,Math.max(60,n[2])),h=w*1.1;vb=[Math.min(Math.max(n[0],0),1000-w),Math.min(Math.max(n[1],0),1100-h),w,h];sv.setAttribute('viewBox',vb.join(' '));lod(sv);clearTimeout(lodT);lodT=setTimeout(afterZoom,300)}
+function zoomAt(f,px,py,sv){const w=vb[2]*f,h=vb[3]*f;setVB([px-(px-vb[0])*w/vb[2],py-(py-vb[1])*h/vb[3],w,h],sv)}
+function mpd(e){ptrs.set(e.pointerId,[e.clientX,e.clientY]);dragMoved=false}
+function mpm(e){
+ if(!ptrs.has(e.pointerId))return;
+ const sv=e.currentTarget,old=[...ptrs.values()];ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+ const cur=[...ptrs.values()],r=sv.getBoundingClientRect(),sc=vb[2]/r.width;
+ if(cur.length===1&&vb[2]<999){const dx=cur[0][0]-old[0][0],dy=cur[0][1]-old[0][1];if(Math.abs(dx)+Math.abs(dy)>0)dragMoved=true;setVB([vb[0]-dx*sc,vb[1]-dy*sc,vb[2],vb[3]],sv)}
+ else if(cur.length===2){dragMoved=true;const d0=Math.hypot(old[0][0]-old[1][0],old[0][1]-old[1][1]),d1=Math.hypot(cur[0][0]-cur[1][0],cur[0][1]-cur[1][1]);if(d0>0&&d1>0)zoomAt(d0/d1,vb[0]+((cur[0][0]+cur[1][0])/2-r.left)*sc,vb[1]+((cur[0][1]+cur[1][1])/2-r.top)*sc,sv)}
+}
+function mpu(e){ptrs.delete(e.pointerId)}
+function mwh(e){e.preventDefault();const sv=e.currentTarget,r=sv.getBoundingClientRect(),sc=vb[2]/r.width;zoomAt(e.deltaY>0?1.25:.8,vb[0]+(e.clientX-r.left)*sc,vb[1]+(e.clientY-r.top)*sc,sv)}
+function zbtn(f){const sv=$('#mapsv');if(!sv)return;if(!f)setVB([0,0,1000,1100],sv);else zoomAt(1/f,vb[0]+vb[2]/2,vb[1]+vb[3]/2,sv)}
+function afterZoom(){
+ if(1000/vb[2]<2.4)return;
+ const cx=vb[0]+vb[2]/2,cy=vb[1]+vb[3]/2;let b=null,ba=1e9;
+ provs.forEach(p=>{const q=p.bb;if(q&&cx>=q[0]&&cx<=q[2]&&cy>=q[1]&&cy<=q[3]){const a=(q[2]-q[0])*(q[3]-q[1]);if(a<ba){ba=a;b=p}}});
+ if(b)loadCities(b.a);
+}
+function openPhotos(id){
+ const v=items[id]||{},base=(v.fn||'').replace(/\.[^.]+$/,''),useName=/\d{3,}/.test(base)&&base.length>3,t=useName?base:(v.date||'');
+ try{navigator.clipboard.writeText(t)}catch(e){}
+ toast(useName?'已复制文件名 '+t+'，到相册搜索栏粘贴即可找到这张':'已复制日期 '+t+'，请在相册里按日期查找');
+ setTimeout(()=>{location.href='photos-redirect://'},1200);
+}
 function photoView(){
  loadCN();
- const ph=dsort(rec('photo')),prov=new Set(ph.map(v=>v.prov).filter(p=>p&&p!=='境外'));
- let board='<div class="mapph">🗺️ 足迹地图加载中…</div>';
- if(cn){
-  const ox=200+(600-cn.w)/2,oy=250+(600-cn.h)/2,P=v=>[ox+(v.lng-cn.x0)*cn.c*cn.k,oy+(cn.y0-v.lat)*cn.k];
-  const free=SL.map((_,i)=>i),pins=new Map();let ln='',tl='';
+ const ph=dsort(rec('photo')),vp=new Set(),vc=new Set();
+ ph.forEach(v=>{if(v.ad){vp.add(v.ad.slice(0,2)+'0000');vc.add(v.ad);vc.add(v.ad.slice(0,4)+'00')}else if(v.prov){const p=provs.find(p=>p.n===v.prov);if(p)vp.add(p.a)}});
+ const z=1000/vb[2],nm=t=>esc(t.replace(/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区|地区|自治州|盟)$/,''));
+ let board='<div class="mapph">🗺️ 足迹地图加载中…'+(cnProg?' '+cnProg+'/'+34:'')+'</div>';
+ if(provs.length){
+  let pd='',pl='',cd='',cl='',ln='',pn='',tl='';
+  provs.forEach(p=>{pd+=`<path d="${p.d}" style="fill:${vp.has(p.a)?'#e9c27c':'#dcc59c'}" stroke="#a88a55" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;pl+=`<text class="plb" x="${p.c[0].toFixed(0)}" y="${p.c[1].toFixed(0)}" text-anchor="middle" font-size="${24/z}" style="fill:#5a4630;pointer-events:none">${nm(p.n)}</text>`});
+  Object.values(cities).forEach(a=>a.forEach(c=>{cd+=`<path d="${c.d}" style="fill:${vc.has(c.a)?'#e0a65a':'none'}" stroke="#8a6d3b" stroke-width=".8" vector-effect="non-scaling-stroke"/>`;cl+=`<text class="clb" x="${c.c[0].toFixed(0)}" y="${c.c[1].toFixed(0)}" text-anchor="middle" font-size="${22/z}" style="fill:#4a3a22;pointer-events:none">${nm(c.n)}</text>`}));
+  const free=SL.map((_,i)=>i),pins=new Map();
   ph.filter(v=>v.lng!=null&&v.prov&&v.prov!=='境外').slice(0,16).forEach((v,n)=>{
-   const p=P(v);let bi=free[0],bd=1e9;free.forEach(i=>{const d=(SL[i][0]+80-p[0])**2+(SL[i][1]+95-p[1])**2;if(d<bd){bd=d;bi=i}});free.splice(free.indexOf(bi),1);
+   const p=PX(v.lng,v.lat);let bi=free[0],bd=1e9;free.forEach(i=>{const d=(SL[i][0]+80-p[0])**2+(SL[i][1]+95-p[1])**2;if(d<bd){bd=d;bi=i}});free.splice(free.indexOf(bi),1);
    const sx=SL[bi][0],sy=SL[bi][1],cx=sx+80,cy=sy+95;
-   ln+=`<line x1="${p[0].toFixed(1)}" y1="${p[1].toFixed(1)}" x2="${cx}" y2="${cy}" stroke="#a8803f" stroke-width="1.3" opacity=".5"/>`;
+   ln+=`<line x1="${p[0].toFixed(1)}" y1="${p[1].toFixed(1)}" x2="${cx}" y2="${cy}" stroke="#a8803f" stroke-width="1.2" opacity=".5" vector-effect="non-scaling-stroke"/>`;
    pins.set(v.lng.toFixed(2)+','+v.lat.toFixed(2),p);
-   tl+=`<g transform="rotate(${(n%5-2)*1.2} ${cx} ${cy})" onclick="openForm('photo','${v.id}')" style="cursor:pointer"><rect x="${sx}" y="${sy}" width="160" height="190" style="fill:var(--pol)" stroke="rgba(0,0,0,.2)"/><image href="${v.img||''}" x="${sx+8}" y="${sy+8}" width="144" height="144" preserveAspectRatio="xMidYMid slice"/><text x="${cx}" y="${sy+172}" text-anchor="middle" font-size="15" font-family="Courier New,monospace" style="fill:var(--ink)">${esc((v.place||v.prov||'').slice(0,9))}</text><text x="${cx}" y="${sy+186}" text-anchor="middle" font-size="11" font-family="Courier New,monospace" style="fill:var(--mut)">${esc(v.date||'')}</text></g>`;
+   tl+=`<g transform="rotate(${(n%5-2)*1.2} ${cx} ${cy})" onclick="if(!dragMoved)openForm('photo','${v.id}')" style="cursor:pointer"><rect x="${sx}" y="${sy}" width="160" height="190" style="fill:var(--pol)" stroke="rgba(0,0,0,.2)"/><image href="${v.img||''}" x="${sx+8}" y="${sy+8}" width="144" height="144" preserveAspectRatio="xMidYMid slice"/><text x="${cx}" y="${sy+172}" text-anchor="middle" font-size="15" font-family="Courier New,monospace" style="fill:var(--ink)">${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,9))}</text><text x="${cx}" y="${sy+186}" text-anchor="middle" font-size="11" font-family="Courier New,monospace" style="fill:var(--mut)">${esc(v.date||'')}</text></g>`;
   });
-  const pn=[...pins.values()].map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="8" fill="#c0392b" stroke="#fff" stroke-width="2"/>`).join('');
-  board=`<svg viewBox="0 0 1000 1100" width="100%" style="display:block;background:var(--card);border:1px solid var(--line);border-radius:4px"><g transform="translate(${ox} ${oy})"><path d="${cn.d}" style="fill:#dcc59c" stroke="#b79d6c" stroke-width="1.5" stroke-linejoin="round"/></g>${ln}${pn}${tl}</svg>`;
+  pins.forEach(p=>{pn+=`<circle class="pinc" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${9/Math.sqrt(z)}" fill="#c0392b" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`});
+  board=`<div style="position:relative"><svg id="mapsv" viewBox="${vb.join(' ')}" width="100%" style="display:block;background:var(--card);border:1px solid var(--line);border-radius:4px;touch-action:${vb[2]<999?'none':'pan-y'}" onpointerdown="mpd(event)" onpointermove="mpm(event)" onpointerup="mpu(event)" onpointercancel="mpu(event)" onwheel="mwh(event)"><g>${pd}</g><g id="lc" style="display:${z>=2.4?'':'none'}">${cd}</g>${ln}<g>${pl}${cl}</g>${pn}${tl}</svg><div class="zb"><button onclick="zbtn(1.6)">＋</button><button onclick="zbtn(.625)">－</button><button onclick="zbtn(0)">⟲</button></div></div><p class="mut" style="text-align:center">双指或＋－缩放地图，放大后显示更详细的地区；颜色深的是去过的地方</p>`;
  }
- const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="photos-redirect://" class="mut" onclick="event.stopPropagation()">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
- return `<div class="card static" style="text-align:center">已点亮 <b>${prov.size}</b> 个省级地区 · <b>${ph.length}</b> 张照片</div>${board}${wall}`;
+ const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
+ return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${ph.length}</b> 张照片</div>${board}${wall}`;
 }
 function mapTap(e){
  if(!placing)return;
