@@ -69,6 +69,9 @@ textarea{min-height:80px}
 .locb{position:absolute;top:10px;right:10px;z-index:30;width:40px;height:40px;border-radius:50%;border:0;background:#fff;color:#2f7df6;font-size:22px;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer}
 .mapph{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--card);border:2px solid var(--ink);border-radius:4px;color:var(--mut)}
 .zb{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}.zb button{width:36px;height:36px;border-radius:50%;border:0;background:#fff;color:#3b2f25;font-size:18px;box-shadow:0 2px 5px rgba(0,0,0,.35)}
+.ft{position:absolute;width:16%;box-sizing:border-box;background:var(--pol);padding:2.2%;box-shadow:1px 2px 5px rgba(0,0,0,.35);z-index:4;cursor:pointer}
+.ft img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:sepia(.3)}
+.ft div{font:8px/1.3 "Courier New",monospace;text-align:center;white-space:nowrap;overflow:hidden;color:var(--ink);margin-top:2px}
 </style>
 </head>
 <body>
@@ -334,13 +337,13 @@ function loadAMap(){
   const s0=startCenter();amap=new AMap.Map(mEl,{zoom:s0.z,center:s0.c,resizeEnable:true});
   amap.on('moveend',()=>{try{const c=amap.getCenter();localStorage.setItem('mapc',JSON.stringify({c:[c.lng,c.lat],z:amap.getZoom()}))}catch(e){}});
   render();
-  AMap.plugin(['AMap.MarkerCluster','AMap.AutoComplete','AMap.PlaceSearch','AMap.Geocoder','AMap.CitySearch','AMap.DistrictSearch'],()=>{plugReady=true;loadCN();drawMarkers();if(window.AMap&&AMap.CitySearch)locFail(null,false)});
+  AMap.plugin(['AMap.MarkerCluster','AMap.AutoComplete','AMap.PlaceSearch','AMap.Geocoder','AMap.CitySearch','AMap.DistrictLayer'],()=>{plugReady=true;drawMarkers();if(window.AMap&&AMap.CitySearch)locFail(null,false)});
  };
  sc.onerror=()=>{amapState=3;render()};
  document.head.appendChild(sc);
  setTimeout(()=>{if(amapState===1){amapState=3;render()}},20000);
 }
-function mountMap(){const e=$('#mapslot');if(e&&mEl){e.style.position='relative';e.appendChild(mEl);if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
+function mountMap(){mountF();const e=$('#mapslot');if(e&&mEl){e.style.position='relative';e.appendChild(mEl);if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
 let cluster=null,tips=[],tmr=null;
 function pin(v,n){
  const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
@@ -595,33 +598,51 @@ function openPhotos(id){
  toast(useName?'已复制文件名 '+t+'，到相册搜索栏粘贴即可找到这张':'已复制日期 '+t+'，请在相册里按日期查找');
  setTimeout(()=>{location.href='photos-redirect://'},1200);
 }
-function photoView(){
- loadCN();
- const ph=dsort(rec('photo')),vp=new Set(),vc=new Set(),vd=new Set();
- ph.forEach(v=>{if(v.ad){vp.add(v.ad.slice(0,2)+'0000');vc.add(v.ad);vd.add(v.ad);vc.add(v.ad.slice(0,4)+'00')}else if(v.prov){const p=provs.find(p=>p.n===v.prov);if(p)vp.add(p.a)}});
- const z=1000/vb[2],nm=t=>esc(t.replace(/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区|地区|自治州|盟)$/,''));
- let board='<div class="mapph" onclick="cnRetry()">🗺️ '+(cnBusy?'足迹地图加载中… '+cnProg+'/34':'点这里重新加载地图')+'</div>';
- if(provs.length){
-  let pd='',pl='',cd='',cl='',dd='',dl='',ln='',pn='',tl='';
-  provs.forEach(p=>{pd+=`<path d="${p.d}" style="fill:${vp.has(p.a)?'#e9c27c':'#dcc59c'}" stroke="#a88a55" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;pl+=`<text class="plb" x="${p.c[0].toFixed(0)}" y="${p.c[1].toFixed(0)}" text-anchor="middle" font-size="${24/z}" style="fill:#5a4630;pointer-events:none">${nm(p.n)}</text>`});
-  Object.entries(cities).forEach(([k,a])=>a.forEach(c=>{
-   const isC=k.endsWith('0000'),vis=isC?vc.has(c.a):vd.has(c.a);
-   const pth=`<path d="${c.d}" style="fill:${vis?(isC?'#e0a65a':'#d4883a'):'none'}" stroke="${isC?'#8a6d3b':'#7a5d2b'}" stroke-width="${isC?.8:.6}" vector-effect="non-scaling-stroke"/>`;
-   const lb=(cl_,fs)=>`<text class="${cl_}" x="${c.c[0].toFixed(0)}" y="${c.c[1].toFixed(0)}" text-anchor="middle" font-size="${fs/z}" style="fill:#4a3a22;pointer-events:none">${nm(c.n)}</text>`;
-   if(isC){cd+=pth;cl+=lb('clb',22)}else{dd+=pth;dl+=lb('dlb',20)}}));
-  const free=SL.map((_,i)=>i),pins=new Map();
-  ph.filter(v=>v.lng!=null&&v.prov&&v.prov!=='境外').slice(0,16).forEach((v,n)=>{
-   const p=PX(v.lng,v.lat);let bi=free[0],bd=1e9;free.forEach(i=>{const d=(SL[i][0]+80-p[0])**2+(SL[i][1]+95-p[1])**2;if(d<bd){bd=d;bi=i}});free.splice(free.indexOf(bi),1);
-   const sx=SL[bi][0],sy=SL[bi][1],cx=sx+80,cy=sy+95;
-   ln+=`<line x1="${p[0].toFixed(1)}" y1="${p[1].toFixed(1)}" x2="${cx}" y2="${cy}" stroke="#a8803f" stroke-width="1.2" opacity=".5" vector-effect="non-scaling-stroke"/>`;
-   pins.set(v.lng.toFixed(2)+','+v.lat.toFixed(2),p);
-   tl+=`<g transform="rotate(${(n%5-2)*1.2} ${cx} ${cy})" onclick="if(!dragMoved)openForm('photo','${v.id}')" style="cursor:pointer"><rect x="${sx}" y="${sy}" width="160" height="190" style="fill:var(--pol)" stroke="rgba(0,0,0,.2)"/><image href="${v.img||''}" x="${sx+8}" y="${sy+8}" width="144" height="144" preserveAspectRatio="xMidYMid slice"/><text x="${cx}" y="${sy+172}" text-anchor="middle" font-size="15" font-family="Courier New,monospace" style="fill:var(--ink)">${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,9))}</text><text x="${cx}" y="${sy+186}" text-anchor="middle" font-size="11" font-family="Courier New,monospace" style="fill:var(--mut)">${esc(v.date||'')}</text></g>`;
-  });
-  pins.forEach(p=>{pn+=`<circle class="pinc" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${6/z}" fill="#c0392b" stroke="#fff" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`});
-  board=`<div style="position:relative;width:100%;padding-top:110%"><svg id="mapsv" viewBox="${vb.join(' ')}" style="position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--card);border:1px solid var(--line);border-radius:4px;touch-action:${vb[2]<999?'none':'pan-y'}" onpointerdown="mpd(event)" onpointermove="mpm(event)" onpointerup="mpu(event)" onpointercancel="mpu(event)" onwheel="mwh(event)"><g>${pd}</g><g id="lc" style="display:${z>=2.4?'':'none'}">${cd}</g><g id="ld" style="display:${z>=7?'':'none'}">${dd}</g>${ln}<g>${pl}${cl}${dl}</g>${pn}${tl}</svg><div class="zb"><button onclick="zbtn(1.6)">＋</button><button onclick="zbtn(.625)">－</button><button onclick="zbtn(0)">⟲</button></div></div><p class="mut" style="text-align:center">双指或＋－缩放地图，放大后依次显示市、区县；颜色深的是去过的地方</p>`;
+let fmap=null,fEl=null,fLayers=[],fMks=[],fSig='',fPh=[],fSlot={},fVis={vp:new Set(),vc:new Set(),vd:new Set()};
+function drawLines(){
+ const sv=$('#flines'),w=$('#fwrap');if(!sv||!fmap||!fEl||!w)return;
+ const wr=w.getBoundingClientRect(),mr=fEl.getBoundingClientRect();let h='';
+ fPh.forEach(v=>{const s2=fSlot[v.id];if(!s2)return;const p=fmap.lngLatToContainer([v.lng,v.lat]);
+  if(p.x<0||p.y<0||p.x>mr.width||p.y>mr.height)return;
+  h+=`<line x1="${mr.left-wr.left+p.x}" y1="${mr.top-wr.top+p.y}" x2="${s2[0]/1000*wr.width}" y2="${s2[1]/1100*wr.height}" stroke="#a8803f" stroke-width="1" opacity=".6"/>`});
+ sv.innerHTML=h;
+}
+function mountF(){
+ const e=$('#fslot');if(!e||!window.AMap||!plugReady||!AMap.DistrictLayer)return;
+ if(!fEl){
+  fEl=document.createElement('div');fEl.style.cssText='width:100%;height:100%;border:2px solid var(--ink);box-sizing:border-box;border-radius:4px';
+  fmap=new AMap.Map(fEl,{zoom:4,center:[104.5,36],resizeEnable:true});
+  ['mapmove','zoomchange','moveend','complete'].forEach(ev=>fmap.on(ev,drawLines));
  }
+ e.innerHTML='';e.appendChild(fEl);
+ const V=fVis,sig=[...V.vp,'|',...V.vc,'|',...V.vd].join(',');
+ if(sig!==fSig){
+  fSig=sig;fLayers.forEach(l=>fmap.remove(l));fLayers=[];
+  const fill=p=>V.vd.has(String(p.adcode_cou))?'rgba(212,136,58,.7)':V.vc.has(String(p.adcode_cit))?'rgba(224,166,90,.55)':'rgba(0,0,0,0)';
+  const st={fill,'province-stroke':'#8a6d3b','city-stroke':'rgba(138,109,59,.55)','county-stroke':'rgba(138,109,59,.35)','nation-stroke':'#6b5530','coastline-stroke':'#8a6d3b'};
+  const C=new AMap.DistrictLayer.Country({SOC:'CHN',depth:2,zIndex:10,styles:{...st,fill:p=>V.vp.has(String(p.adcode_pro))?'rgba(233,194,124,.45)':'rgba(0,0,0,0)'}});
+  fmap.add(C);fLayers.push(C);
+  [...V.vp].forEach(pa=>{const P=new AMap.DistrictLayer.Province({adcode:[pa],depth:2,zIndex:11,styles:st});fmap.add(P);fLayers.push(P)});
+ }
+ fMks.forEach(m=>fmap.remove(m));fMks=[];
+ fPh.forEach(v=>{const m=new AMap.Marker({position:[v.lng,v.lat],anchor:'center',zIndex:50,content:'<div style="width:9px;height:9px;border-radius:50%;background:#c0392b;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5)"></div>'});fmap.add(m);fMks.push(m)});
+ setTimeout(drawLines,50);
+}
+function photoView(){
+ const ph=dsort(rec('photo')),vp=new Set(),vc=new Set(),vd=new Set();
+ ph.forEach(v=>{if(v.ad){vp.add(v.ad.slice(0,2)+'0000');vc.add(v.ad.slice(0,4)+'00');vd.add(v.ad)}});
+ fVis={vp,vc,vd};
+ fPh=ph.filter(v=>v.lng!=null&&v.prov&&v.prov!=='境外').slice(0,16);
+ const free=SL.map((_,i)=>i);fSlot={};
+ const tiles=fPh.map((v,n)=>{
+  const p=[500+(v.lng-104.5)*9.5,550-(v.lat-36)*11];let bi=free[0],bd=1e9;
+  free.forEach(i=>{const d=(SL[i][0]+80-p[0])**2+(SL[i][1]+95-p[1])**2;if(d<bd){bd=d;bi=i}});free.splice(free.indexOf(bi),1);
+  const sx=SL[bi][0],sy=SL[bi][1];fSlot[v.id]=[sx+80,sy+95];
+  return `<div class="ft" style="left:${sx/10}%;top:${sy/11}%;transform:rotate(${(n%5-2)*1.2}deg)" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="">`:''}<div>${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,7))}</div></div>`}).join('');
  const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
- return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${ph.length}</b> 张照片</div>${board}${cnBusy&&provs.length?`<p class="mut" style="text-align:center">地图加载中… ${cnProg}/34</p>`:''}${cnErr?`<p class="mut" style="text-align:center;word-break:break-all">部分地区加载失败：${esc(cnErr)} <a href="#" onclick="cnRetry();return false">重试</a></p>`:''}${wall}`;
+ return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片</div>
+ <div id="fwrap" style="position:relative;width:100%;padding-top:110%;background:var(--card);border:1px solid var(--line);border-radius:4px"><div id="fslot" style="position:absolute;left:20%;top:22.7%;width:60%;height:54.5%"><div class="mapph" style="height:100%;aspect-ratio:auto">🗺️ 地图加载中…</div></div><svg id="flines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></svg>${tiles}</div>
+ <p class="mut" style="text-align:center">用手指缩放、拖动地图，可以一直放大到街道；去过的省、市、区县会涂上颜色</p>${wall}`;
 }
 function mapTap(e){
  if(!placing)return;
