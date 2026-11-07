@@ -3,6 +3,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>我们的胶片日记</title>
 <meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://webapi.amap.com">
+<link rel="dns-prefetch" href="https://restapi.amap.com">
+<link rel="dns-prefetch" href="https://vdata.amap.com">
 <meta name="theme-color" content="#3b2f25">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -148,6 +151,7 @@ async function loadAll(){
   }
   meta=items.meta||null;warn='';
   if(items.cfg&&items.cfg.key){AMAP.key=items.cfg.key;AMAP.sec=items.cfg.sec;try{localStorage.setItem('amcfg',JSON.stringify(items.cfg))}catch(e){}loadAMap()}
+  if(items.appicon&&items.appicon.u)applyIcon(items.appicon.u);
  }catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
  loading=false;ready=true;if(changed)render();
 }
@@ -310,11 +314,24 @@ function foodViewOld(){
 }
 let AMAP={key:"",sec:""};
 let amap=null,mEl=null,mks=[],amapState=0,sres=[],lastQ='',fit=0;
+let plugReady=false;
+function startCenter(){
+ const f=rec('food').filter(v=>v.lng!=null);
+ if(f.length)return {c:[f.reduce((a,v)=>a+v.lng,0)/f.length,f.reduce((a,v)=>a+v.lat,0)/f.length],z:f.length>1?10:14};
+ try{const m=JSON.parse(localStorage.getItem('mapc')||'null');if(m&&m.c)return m}catch(e){}
+ return {c:[116.397,39.909],z:11};
+}
 function loadAMap(){
  if(amapState)return;amapState=1;
  window._AMapSecurityConfig={securityJsCode:AMAP.sec};
- const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key+'&plugin=AMap.PlaceSearch,AMap.AutoComplete,AMap.MarkerCluster,AMap.Geocoder';
- sc.onload=()=>{amapState=2;mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';amap=new AMap.Map(mEl,{zoom:12,resizeEnable:true});startLocate();render()};
+ const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key;
+ sc.onload=()=>{
+  amapState=2;mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';
+  const s0=startCenter();amap=new AMap.Map(mEl,{zoom:s0.z,center:s0.c,resizeEnable:true});
+  amap.on('moveend',()=>{try{const c=amap.getCenter();localStorage.setItem('mapc',JSON.stringify({c:[c.lng,c.lat],z:amap.getZoom()}))}catch(e){}});
+  render();
+  AMap.plugin(['AMap.MarkerCluster','AMap.AutoComplete','AMap.PlaceSearch','AMap.Geocoder','AMap.CitySearch'],()=>{plugReady=true;drawMarkers();locateNow(false)});
+ };
  sc.onerror=()=>{amapState=3;render()};
  document.head.appendChild(sc);
  setTimeout(()=>{if(amapState===1){amapState=3;render()}},20000);
@@ -328,7 +345,7 @@ function pin(v,n){
  return `<div style="position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid ${col}${sel===v.id&&one?';outline:3px solid #e8b923':''}"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div><div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 ${one?12:16}px sans-serif;text-shadow:0 1px 3px #000">${lab}</div><div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div>${one?`<div style="position:absolute;top:68px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(0,0,0,.65);color:#fff;padding:0 6px;border-radius:8px;font:11px sans-serif">${esc(v.name)}</div>`:''}</div>`;
 }
 function drawMarkers(){
- if(!amap)return;
+ if(!amap||!plugReady)return;
  const pts=rec('food').filter(v=>v.lng!=null&&(ff==='全部'||v.kind===ff)).map(v=>({lnglat:[v.lng,v.lat],id:v.id,v}));
  if(cluster)cluster.setData(pts);
  else{
@@ -346,7 +363,7 @@ function drawMarkers(){
 function tipInput(){
  clearTimeout(tmr);
  const q=($('#sq')||{}).value;
- if(!q||!q.trim()||!window.AMap){const e=$('#tips');if(e)e.innerHTML='';return}
+ if(!q||!q.trim()||!window.AMap||!AMap.AutoComplete){const e=$('#tips');if(e)e.innerHTML='';return}
  tmr=setTimeout(()=>{new AMap.AutoComplete({city:myCity||'全国'}).search(q.trim(),(st,r)=>{
   tips=(st==='complete'&&r.tips?r.tips:[]).filter(t=>t.location&&t.location.lng!=null);
   if(me)tips.forEach(t=>t.d=dist(me,[t.location.lng,t.location.lat]));
@@ -366,7 +383,7 @@ function navLinks(v){
  return `<div style="margin-top:6px;clear:both"><a class="btn o" style="${st}" href="${ap}" onclick="event.stopPropagation()">🧭 Apple 地图导航</a>${am}</div>`;
 }
 function searchShop(){
- lastQ=$('#sq').value.trim();if(!lastQ||!window.AMap)return;
+ lastQ=$('#sq').value.trim();if(!lastQ||!window.AMap||!AMap.PlaceSearch)return;
  new AMap.PlaceSearch({pageSize:6,city:myCity||'全国'}).search(lastQ,(st,r)=>{sres=st==='complete'&&r.poiList?r.poiList.pois:[];if(!sres.length)toast('没搜到，换个关键词或加上城市');render()});
 }
 function pickPoi(i){
@@ -393,18 +410,30 @@ function foodView(){
 let me=null,meMk=null,myCity='',locBtn=null,watchId=null;
 function dist(a,b){const r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[0]-a[0])*r,x=Math.sin(dl/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dn/2)**2;return 12742000*Math.asin(Math.sqrt(x))}
 function preloadMap(){try{const c=JSON.parse(localStorage.getItem('amcfg')||'null');if(c&&c.key&&!AMAP.key){AMAP.key=c.key;AMAP.sec=c.sec}}catch(e){}if(AMAP.key)loadAMap()}
-function startLocate(){
- if(!navigator.geolocation||!window.AMap||watchId)return;
- watchId=navigator.geolocation.watchPosition(p=>{
-  AMap.convertFrom([p.coords.longitude,p.coords.latitude],'gps',(st,r)=>{
-   if(!r||r.info!=='ok'||!r.locations||!r.locations[0])return;
-   const first=!me;me=[r.locations[0].lng,r.locations[0].lat];
-   if(!meMk){meMk=new AMap.Marker({position:me,anchor:'center',zIndex:200,content:'<div style="width:16px;height:16px;border-radius:50%;background:#2f7df6;border:3px solid #fff;box-shadow:0 0 0 6px rgba(47,125,246,.25)"></div>'});amap.add(meMk)}else meMk.setPosition(me);
-   if(first){new AMap.Geocoder().getAddress(me,(s2,r2)=>{if(s2==='complete'&&r2.regeocode){const a=r2.regeocode.addressComponent;myCity=(typeof a.city==='string'&&a.city)||a.province||''}});
-    if(!fit)amap.setZoomAndCenter(14,me)}
-  })},()=>{toast('未获得定位权限：请在系统设置里允许 Safari 使用定位')},{enableHighAccuracy:true,maximumAge:15000});
+function setMe(lng,lat){
+ const first=!me;me=[lng,lat];
+ if(amap){if(!meMk){meMk=new AMap.Marker({position:me,anchor:'center',zIndex:200,content:'<div style="width:16px;height:16px;border-radius:50%;background:#2f7df6;border:3px solid #fff;box-shadow:0 0 0 6px rgba(47,125,246,.25)"></div>'});amap.add(meMk)}else meMk.setPosition(me)}
+ if(first){
+  if(AMap.Geocoder)new AMap.Geocoder().getAddress(me,(s2,r2)=>{if(s2==='complete'&&r2.regeocode){const a=r2.regeocode.addressComponent;myCity=(typeof a.city==='string'&&a.city)||a.province||''}});
+  if(!fit&&amap)amap.setZoomAndCenter(14,me);
+ }
 }
-function goMe(){if(me&&amap)amap.setZoomAndCenter(16,me);else{if(watchId!=null)navigator.geolocation.clearWatch(watchId);watchId=null;startLocate();toast('正在定位…请允许定位权限')}}
+function locFail(e,gesture){
+ if(window.AMap&&AMap.CitySearch&&!myCity)new AMap.CitySearch().getLocalCity((st,r)=>{if(st==='complete'&&typeof r.city==='string'&&r.city){myCity=r.city;if(gesture)toast('无法精确定位，已按所在城市“'+r.city+'”为你搜索')}});
+ if(!gesture)return;
+ alert(e&&e.code===1?'定位被拒绝。请到 设置 → 隐私与安全性 → 定位服务，打开定位，并在“Safari 网站”（或本网页对应的那一项）里选“使用期间”，再回来点一次定位按钮。':e&&e.code===3?'定位超时，请到信号好的地方再点一次。':'暂时获取不到位置，请确认已开启定位服务。');
+}
+function toMe(p){AMap.convertFrom([p.coords.longitude,p.coords.latitude],'gps',(st,r)=>{if(r&&r.info==='ok'&&r.locations&&r.locations[0])setMe(r.locations[0].lng,r.locations[0].lat)})}
+function locateNow(gesture){
+ if(!navigator.geolocation||!window.AMap){if(gesture)alert('当前浏览器不支持定位');return}
+ navigator.geolocation.getCurrentPosition(p=>{
+  AMap.convertFrom([p.coords.longitude,p.coords.latitude],'gps',(st,r)=>{
+   if(r&&r.info==='ok'&&r.locations&&r.locations[0]){setMe(r.locations[0].lng,r.locations[0].lat);if(gesture&&amap)amap.setZoomAndCenter(16,me);
+    if(watchId==null)watchId=navigator.geolocation.watchPosition(toMe,()=>{},{enableHighAccuracy:true,maximumAge:15000,timeout:30000})}
+   else locFail(null,gesture)});
+ },e=>locFail(e,gesture),{enableHighAccuracy:false,timeout:15000,maximumAge:60000});
+}
+function goMe(){if(me&&amap){amap.setZoomAndCenter(16,me);return}locateNow(true)}
 function tlView(){
  const a=dsort(Object.entries(items).filter(([k,v])=>v.type&&v.type!=='letter'&&v.date).map(([k,v])=>({id:k,...v})));
  if(!a.length)return empty();
@@ -419,7 +448,7 @@ function tlView(){
 function applyIcon(u){let l=document.querySelector('link[rel="apple-touch-icon"]');if(!l){l=document.createElement('link');l.rel='apple-touch-icon';document.head.appendChild(l)}l.href=u}
 function iconPick(){
  const i=document.createElement('input');i.type='file';i.accept='image/*';
- i.onchange=()=>{const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d'),m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,180,180);const u=c.toDataURL('image/png');try{localStorage.setItem('icon',u)}catch(e){}applyIcon(u);alert('图标已设置。请先从主屏幕删除旧图标，再在 Safari 里重新“添加到主屏幕”，新图标才会生效。')};im.src=URL.createObjectURL(f)};
+ i.onchange=()=>{const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d'),m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,180,180);const u=c.toDataURL('image/png');try{localStorage.setItem('icon',u)}catch(e){}applyIcon(u);save('appicon',{u});alert('图标已保存。请用 Safari 直接打开网址（不要从主屏幕图标进入），登录后再“添加到主屏幕”，新图标才会生效。')};im.src=URL.createObjectURL(f)};
  i.click();
 }
 try{const u=localStorage.getItem('icon');if(u)applyIcon(u)}catch(e){}
