@@ -56,6 +56,15 @@ textarea{min-height:80px}
 .map[style*="url("]{background-size:cover;background-position:center}
 .pin{position:absolute;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:2px solid #fff;color:#fff;font:700 12px/24px "Courier New",monospace;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.4);cursor:pointer}
 .pin.eat{background:#b5482f}.pin.want{background:#3f7d8c}.pin.sel{outline:3px solid #e8b923}
+.tl2{position:relative;padding:4px 0}.tl2:before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:2px dashed var(--acc);opacity:.7}
+.tlh{text-align:center;margin:10px 0 14px;position:relative}.tlh .stamp{background:var(--bg);padding:2px 10px}
+.tli{position:relative;width:50%;padding:0 18px 16px;cursor:pointer}.tli.l{text-align:right}.tli.r{margin-left:50%}
+.tli .dot{position:absolute;top:16px;width:12px;height:12px;border-radius:50%;background:var(--acc);border:2px solid var(--bg)}.tli.l .dot{right:-7px}.tli.r .dot{left:-7px}
+.tlc{display:inline-block;max-width:100%;text-align:left;background:var(--pol);padding:7px 7px 9px;box-shadow:2px 3px 8px rgba(0,0,0,.25);transform:rotate(-1.5deg)}.tli.r .tlc{transform:rotate(1.5deg)}
+.tlc img{width:100%;aspect-ratio:1;object-fit:cover;display:block;margin-bottom:5px;filter:sepia(.3)}
+.tld{font:11px "Courier New",monospace;color:var(--mut)}.tlt{font-size:13px;word-break:break-all}
+.locb{position:absolute;top:10px;right:10px;z-index:30;width:40px;height:40px;border-radius:50%;border:0;background:#fff;color:#2f7df6;font-size:22px;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer}
+.mapph{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--card);border:2px solid var(--ink);border-radius:4px;color:var(--mut)}
 </style>
 </head>
 <body>
@@ -138,11 +147,11 @@ async function loadAll(){
    ((await rest(q))||[]).forEach(r=>{items[r.id]=r.data;vers[r.id]=r.updated_at});changed=true;
   }
   meta=items.meta||null;warn='';
-  if(items.cfg&&items.cfg.key){AMAP.key=items.cfg.key;AMAP.sec=items.cfg.sec}
+  if(items.cfg&&items.cfg.key){AMAP.key=items.cfg.key;AMAP.sec=items.cfg.sec;try{localStorage.setItem('amcfg',JSON.stringify(items.cfg))}catch(e){}loadAMap()}
  }catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
  loading=false;ready=true;if(changed)render();
 }
-function startSync(){vers={};col=shim;loadAll();poll=setInterval(()=>{if(!document.hidden)loadAll()},15000)}
+function startSync(){vers={};col=shim;setTimeout(preloadMap,0);loadAll();poll=setInterval(()=>{if(!document.hidden)loadAll()},15000)}
 function stopSync(){if(poll){clearInterval(poll);poll=null}col=null;items={};meta=null}
 function apply(a){
  if(a){if(poll)return;authed=true;startSync()}
@@ -178,8 +187,7 @@ function card(v){
 function view(){
  if(!meta)return `<div class="card static"><h3>🎞️ 先装上胶卷</h3><label>你的昵称</label><input id="sa"><label>TA 的昵称</label><input id="sb"><label>在一起的日期</label><input id="ss" type="date" value="${td()}"><p><button class="btn" onclick="setup()">开始记录</button></p></div>`;
  if(tab==='home')return home();
- if(tab==='tl'){const a=dsort(Object.entries(items).filter(([k,v])=>v.type&&v.type!=='letter'&&(v.date)).map(([k,v])=>({id:k,...v})));
-  return a.length?`<div class="tl">${a.map(v=>`<div class="it" onclick="openForm('${v.type}','${v.id}')"><div class="mut">${esc(v.date)} · 第${dayN(v.date)}天</div><div>${T[v.type].i} ${esc(title(v))}</div></div>`).join('')}</div>`:empty()}
+ if(tab==='tl')return tlView();
  if(tab==='food')return foodView();
  const a=dsort(rec(tab));
  if(!a.length)return empty();
@@ -210,7 +218,7 @@ function home(){
  <div class="card static"><h3>🎲 回忆盲盒</h3><div id="box" class="mut">随机抽一段你们的回忆</div><p><button class="btn o" onclick="blind()">抽一张</button></p></div>
  ${moodChart()}
  <div class="card static"><h3>📊 我们的数据</h3>日记 ${rec('diary').length} 篇 · 照片 ${rec('photo').length} 张 · 情话 ${rec('letter').length} 封 · 足迹 ${ps.length} 处 · 复盘 ${rec('fight').length} 次</div>
- <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改密码</button></p>`;
+ <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改密码</button> <button class="btn o" onclick="iconPick()">设置图标</button></p>`;
 }
 function moodChart(){
  const a=dsort(rec('mood')).reverse().slice(-14);
@@ -305,13 +313,13 @@ let amap=null,mEl=null,mks=[],amapState=0,sres=[],lastQ='',fit=0;
 function loadAMap(){
  if(amapState)return;amapState=1;
  window._AMapSecurityConfig={securityJsCode:AMAP.sec};
- const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key+'&plugin=AMap.PlaceSearch,AMap.AutoComplete,AMap.MarkerCluster';
- sc.onload=()=>{amapState=2;mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';amap=new AMap.Map(mEl,{zoom:12,resizeEnable:true});render()};
+ const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key+'&plugin=AMap.PlaceSearch,AMap.AutoComplete,AMap.MarkerCluster,AMap.Geocoder';
+ sc.onload=()=>{amapState=2;mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';amap=new AMap.Map(mEl,{zoom:12,resizeEnable:true});startLocate();render()};
  sc.onerror=()=>{amapState=3;render()};
  document.head.appendChild(sc);
- setTimeout(()=>{if(amapState===1){amapState=3;render()}},12000);
+ setTimeout(()=>{if(amapState===1){amapState=3;render()}},20000);
 }
-function mountMap(){const e=$('#mapslot');if(e&&mEl){e.appendChild(mEl);drawMarkers()}}
+function mountMap(){const e=$('#mapslot');if(e&&mEl){e.style.position='relative';e.appendChild(mEl);if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
 let cluster=null,tips=[],tmr=null;
 function pin(v,n){
  const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
@@ -339,10 +347,12 @@ function tipInput(){
  clearTimeout(tmr);
  const q=($('#sq')||{}).value;
  if(!q||!q.trim()||!window.AMap){const e=$('#tips');if(e)e.innerHTML='';return}
- tmr=setTimeout(()=>{new AMap.AutoComplete({city:'全国'}).search(q.trim(),(st,r)=>{
-  tips=(st==='complete'&&r.tips?r.tips:[]).filter(t=>t.location&&t.location.lng!=null).slice(0,8);
+ tmr=setTimeout(()=>{new AMap.AutoComplete({city:myCity||'全国'}).search(q.trim(),(st,r)=>{
+  tips=(st==='complete'&&r.tips?r.tips:[]).filter(t=>t.location&&t.location.lng!=null);
+  if(me)tips.forEach(t=>t.d=dist(me,[t.location.lng,t.location.lat]));
+  tips=tips.sort((a,b)=>(a.d==null?1e9:a.d)-(b.d==null?1e9:b.d)).slice(0,8);
   const e=$('#tips');if(!e)return;
-  e.innerHTML=tips.map((t,i)=>`<div class="card" style="padding:8px 12px;margin:0 0 6px" onclick="pickTip(${i})"><b>${esc(t.name)}</b><div class="mut">${esc((t.district||'')+(typeof t.address==='string'?t.address:''))}</div></div>`).join('');
+  e.innerHTML=tips.map((t,i)=>`<div class="card" style="padding:8px 12px;margin:0 0 6px" onclick="pickTip(${i})"><b>${esc(t.name)}</b><div class="mut">${esc((t.district||'')+(typeof t.address==='string'?t.address:''))}${t.d!=null?' · '+(t.d<1000?Math.round(t.d)+'米':(t.d/1000).toFixed(1)+'公里'):''}</div></div>`).join('');
  })},300);
 }
 function pickTip(i){
@@ -357,7 +367,7 @@ function navLinks(v){
 }
 function searchShop(){
  lastQ=$('#sq').value.trim();if(!lastQ||!window.AMap)return;
- new AMap.PlaceSearch({pageSize:6}).search(lastQ,(st,r)=>{sres=st==='complete'&&r.poiList?r.poiList.pois:[];if(!sres.length)toast('没搜到，换个关键词或加上城市');render()});
+ new AMap.PlaceSearch({pageSize:6,city:myCity||'全国'}).search(lastQ,(st,r)=>{sres=st==='complete'&&r.poiList?r.poiList.pois:[];if(!sres.length)toast('没搜到，换个关键词或加上城市');render()});
 }
 function pickPoi(i){
  const p=sres[i];sres=[];
@@ -375,11 +385,44 @@ function foodView(){
  const res=sres.map((p,i)=>`<div class="card" onclick="pickPoi(${i})"><b>${esc(p.name)}</b><div class="mut">${esc((p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''))}</div></div>`).join('');
  return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
  <div style="display:flex;gap:6px;margin-bottom:8px">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}</div>
- ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div id="mapslot">${mEl?'':'<p class="mut">地图加载中…</p>'}</div>`}
+ ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
  <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p>
  ${s?card({...s,id:sel}):''}
  ${a.length?a.map(card).join(''):empty()}`;
 }
+let me=null,meMk=null,myCity='',locBtn=null,watchId=null;
+function dist(a,b){const r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[0]-a[0])*r,x=Math.sin(dl/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dn/2)**2;return 12742000*Math.asin(Math.sqrt(x))}
+function preloadMap(){try{const c=JSON.parse(localStorage.getItem('amcfg')||'null');if(c&&c.key&&!AMAP.key){AMAP.key=c.key;AMAP.sec=c.sec}}catch(e){}if(AMAP.key)loadAMap()}
+function startLocate(){
+ if(!navigator.geolocation||!window.AMap||watchId)return;
+ watchId=navigator.geolocation.watchPosition(p=>{
+  AMap.convertFrom([p.coords.longitude,p.coords.latitude],'gps',(st,r)=>{
+   if(!r||r.info!=='ok'||!r.locations||!r.locations[0])return;
+   const first=!me;me=[r.locations[0].lng,r.locations[0].lat];
+   if(!meMk){meMk=new AMap.Marker({position:me,anchor:'center',zIndex:200,content:'<div style="width:16px;height:16px;border-radius:50%;background:#2f7df6;border:3px solid #fff;box-shadow:0 0 0 6px rgba(47,125,246,.25)"></div>'});amap.add(meMk)}else meMk.setPosition(me);
+   if(first){new AMap.Geocoder().getAddress(me,(s2,r2)=>{if(s2==='complete'&&r2.regeocode){const a=r2.regeocode.addressComponent;myCity=(typeof a.city==='string'&&a.city)||a.province||''}});
+    if(!fit)amap.setZoomAndCenter(14,me)}
+  })},()=>{toast('未获得定位权限：请在系统设置里允许 Safari 使用定位')},{enableHighAccuracy:true,maximumAge:15000});
+}
+function goMe(){if(me&&amap)amap.setZoomAndCenter(16,me);else{if(watchId!=null)navigator.geolocation.clearWatch(watchId);watchId=null;startLocate();toast('正在定位…请允许定位权限')}}
+function tlView(){
+ const a=dsort(Object.entries(items).filter(([k,v])=>v.type&&v.type!=='letter'&&v.date).map(([k,v])=>({id:k,...v})));
+ if(!a.length)return empty();
+ let h='<div class="tl2">',ym='',i=0;
+ a.forEach(v=>{
+  const m=v.date.slice(0,7);
+  if(m!==ym){ym=m;h+=`<div class="tlh"><span class="stamp">${m.slice(0,4)} · ${+m.slice(5)}月</span></div>`}
+  h+=`<div class="tli ${i++%2?'r':'l'}" onclick="openForm('${v.type}','${v.id}')"><div class="dot"></div><div class="tlc">${v.img?`<img src="${v.img}" alt="" loading="lazy">`:''}<div class="tld">${esc(v.date.slice(5))} · 第${dayN(v.date)}天</div><div class="tlt">${T[v.type].i} ${esc(title(v))}</div></div></div>`;
+ });
+ return h+'</div>';
+}
+function applyIcon(u){let l=document.querySelector('link[rel="apple-touch-icon"]');if(!l){l=document.createElement('link');l.rel='apple-touch-icon';document.head.appendChild(l)}l.href=u}
+function iconPick(){
+ const i=document.createElement('input');i.type='file';i.accept='image/*';
+ i.onchange=()=>{const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d'),m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,180,180);const u=c.toDataURL('image/png');try{localStorage.setItem('icon',u)}catch(e){}applyIcon(u);alert('图标已设置。请先从主屏幕删除旧图标，再在 Safari 里重新“添加到主屏幕”，新图标才会生效。')};im.src=URL.createObjectURL(f)};
+ i.click();
+}
+try{const u=localStorage.getItem('icon');if(u)applyIcon(u)}catch(e){}
 function mapTap(e){
  if(!placing)return;
  const r=e.currentTarget.getBoundingClientRect();
