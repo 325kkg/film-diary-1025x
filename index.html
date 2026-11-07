@@ -75,6 +75,7 @@ textarea{min-height:80px}
 #fsfull{position:fixed;inset:0;z-index:150;background:var(--bg);display:none}#fsfull.on{display:block}
 #fsbar{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;gap:10px;align-items:center;z-index:5;pointer-events:none}#fsbar>*{pointer-events:auto}
 #fstt{background:rgba(0,0,0,.6);color:#fff;padding:5px 12px;border-radius:14px;font-size:13px}
+@keyframes unf{from{transform:scaleY(.15);opacity:0}to{transform:scaleY(1);opacity:1}}
 </style>
 </head>
 <body>
@@ -94,11 +95,11 @@ const T={
  event:{n:'大事记',i:'📌',f:[['title','标题','t'],['date','日期','d'],['note','当时的故事','a'],['yearly','每年纪念（倒计时）','c']]},
  diary:{n:'日记',i:'📖',f:[['date','日期','d'],['wx','天气','s',['☀️晴','⛅多云','🌧雨','❄️雪','🌙夜']],['title','标题','t'],['text','今天想说的','a']]},
  photo:{n:'照片足迹',i:'📷',f:[['date','拍摄日期','d'],['place','地点（照片带位置会自动填，也可手动改）','t'],['cap','配文','t'],['img','照片（只存小缩略图，原图留在相册）','p']]},
- letter:{n:'情话信箱',i:'💌',f:[['title','写给TA的标题','t'],['text','想说的话','a'],['open','定时开启日期（可留空）','d']]},
- plan:{n:'约会&心愿',i:'🎟️',f:[['kind','类型','s',['约会计划','心愿清单']],['title','内容','t'],['date','日期（可空）','d'],['done','已完成','c']]},
+ letter:{n:'情话信箱',i:'💌',f:[['title','信的标题','t'],['text','想说的话','a'],['paper','信纸','s',['米色信纸','格子信纸','牛皮纸','淡粉信纸']],['stamp','邮票','s',['❤️','🌸','⭐','🎞️','🍀']],['open','定时拆封日期（可留空）','d']]},
+ plan:{n:'约会&心愿',i:'🎟️',f:[['kind','类型','s',['约会计划','心愿清单','旅行计划']],['title','内容','t'],['date','日期（可空）','d'],['time','时间（可空，如 19:00）','t'],['place','地点（填了可一键导航）','t'],['budget','预算（元）','t'],['items','清单（每行一项，可在卡片上打勾）','a'],['note','备注','a'],['done','已完成','c']]},
  place:{n:'足迹',i:'🍜',f:[['kind','类型','s',['吃过','去过']],['name','店名/地点','t'],['city','城市','t'],['date','日期','d'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['note','感受','a']]},
- mood:{n:'心情',i:'🌤️',f:[['date','日期','d'],['score','今天的心情','s',MO],['note','原因','a']]},
- fight:{n:'吵架复盘',i:'🩹',f:[['date','日期','d'],['cause','因为什么','a'],['fix','怎么和好的','a'],['learn','下次怎么做','a']]},
+ mood:{n:'心情',i:'🌤️',f:[['date','日期','d'],['score','今天的心情','s',MO],['tag','因为','s',['日常','工作学习','约会','吵架','旅行','身体','其他']],['inten','强度','s',['轻微','一般','明显','强烈']],['note','想说的话','a']]},
+ fight:{n:'吵架复盘',i:'🩹',f:[['date','日期','d'],['level','严重程度','s',['小摩擦','有点气','比较严重','很严重']],['cause','起因（发生了什么）','a'],['feelA','我当时的感受','a'],['feelB','TA 当时的感受（猜测或问过后填）','a'],['need','我们各自真正想要的','a'],['fix','怎么和好的','a'],['dur','和好用了多久','s',['当天','1天','2-3天','一周以上','还没和好']],['learn','下次怎么做','a'],['promise','我们的约定','a']]},
  food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['addr','地址','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a'],['img','店铺照片（可选）','p']]}
 };
 const NAV=[['home','🏠','首页'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片足迹'],['letter','💌','信箱'],['plan','🎟️','计划'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘']];
@@ -186,11 +187,14 @@ function card(v){
  let h='';
  if(v.type==='event')h=`<h3>📌 ${esc(v.title)} ${v.yearly?'<span class="stamp">每年</span>':''}</h3><div class="mut">${esc(v.date)} ${dn}</div>${body('note')}`;
  if(v.type==='diary')h=`<div class="row"><h3>${esc(v.wx||'')} ${esc(v.title||'日记')}</h3>${by}</div><div class="mut">${esc(v.date)} ${dn}</div><div style="white-space:pre-wrap">${esc(v.text)}</div>`;
- if(v.type==='letter'){const lock=v.open&&dd(v.open)>0;h=`<div class="row"><h3>💌 ${esc(v.title)}</h3>${by}</div>`+(lock?`<div class="stamp">🔒 ${esc(v.open)} 才能拆开（还有${dd(v.open)}天）</div>`:`<div style="white-space:pre-wrap">${esc(v.text)}</div>`)}
- if(v.type==='plan')h=`<div class="row"><h3>${v.done?'✅':'⬜'} ${esc(v.title)}</h3>${by}</div><span class="tag">${esc(v.kind)}</span><span class="mut">${esc(v.date||'')} ${v.date&&!v.done?(dd(v.date)>=0?'还有'+dd(v.date)+'天':'已过期'):''}</span>`;
+ if(v.type==='letter'){const lock=v.open&&dd(v.open)>0,bg=PAPER[v.paper]||PAPER['米色信纸'];
+ h=`<div style="background:${bg};color:#3b2f25;border-radius:4px;padding:12px 14px;position:relative;margin:-2px;border:1px solid rgba(0,0,0,.15)"><div style="position:absolute;right:10px;top:8px;font-size:26px;border:2px dashed rgba(120,60,40,.5);padding:0 4px;border-radius:3px">${esc(v.stamp||'❤️')}</div><h3 style="color:#3b2f25;margin-right:48px">${lock?'🔒':v.read?'💌':'✉️'} ${esc(v.title)}</h3><div style="font:12px 'Courier New',monospace;opacity:.7">FROM ${esc(v.by||'')}${v.open?' · OPEN '+esc(v.open):''}</div><div style="margin-top:6px">${lock?'蜡封未拆，还要等 '+dd(v.open)+' 天才能打开':v.read?'已拆封 · 点开再读一遍':'点开拆信'}</div></div>`}
+ if(v.type==='plan'){const L=(v.items||'').split('\n').map(x=>x.trim()).filter(Boolean),ck=new Set((v.ck||'').split(',').filter(Boolean)),dn=L.filter((_,k)=>ck.has(String(k))).length,days=v.date?dd(v.date):null;
+ h=`<div class="row"><h3>${v.done?'✅':'⬜'} ${esc(v.title)}</h3>${by}</div><div class="mut"><span class="tag">${esc(v.kind)}</span>${v.date?esc(v.date)+(v.time?' '+esc(v.time):'')+(!v.done?(days>=0?' · 还有'+days+'天':' · 已过期'):''):''}${v.place?' · 📍'+esc(v.place):''}${v.budget?' · ¥'+esc(v.budget):''}</div>${L.length?`<div style="margin-top:6px">${L.map((x,k)=>`<div onclick="event.stopPropagation();togCk('${v.id}',${k})" style="cursor:pointer">${ck.has(String(k))?'☑️':'⬜'} <span style="${ck.has(String(k))?'text-decoration:line-through;opacity:.6':''}">${esc(x)}</span></div>`).join('')}<div style="height:5px;background:var(--line);border-radius:3px;margin-top:6px"><div style="height:100%;width:${Math.round(dn/L.length*100)}%;background:var(--acc);border-radius:3px"></div></div></div>`:''}${v.note?`<div class="mut" style="margin-top:4px">${esc(v.note)}</div>`:''}${v.place?`<div style="margin-top:6px"><a class="btn o" style="text-decoration:none;display:inline-block" href="maps://?daddr=${encodeURIComponent(v.place)}&amp;dirflg=d" onclick="event.stopPropagation()">🧭 导航到这里</a></div>`:''}`}
  if(v.type==='place')h=`<div class="row"><h3>${v.kind==='吃过'?'🍜':'📍'} ${esc(v.name)}</h3><span style="color:var(--acc)">${esc(v.star||'')}</span></div><div class="mut">${esc(v.city||'')} ${esc(v.date||'')} ${by}</div>${body('note')}`;
- if(v.type==='mood')h=`<div class="row"><h3>${MO[v.score]||''} ${esc(v.date)}</h3>${by}</div>${body('note')}`;
- if(v.type==='fight')h=`<div class="row"><h3>🩹 ${esc(v.date)}</h3>${by}</div><div><b>起因：</b>${esc(v.cause)}</div><div><b>和好：</b>${esc(v.fix)}</div><div><b>下次：</b>${esc(v.learn)}</div>`;
+ if(v.type==='mood')h=`<div class="row"><h3><span style="font-size:24px">${MO[v.score]||''}</span> ${esc(v.date)}</h3>${by}</div><div class="mut">${v.tag?`<span class="tag">${esc(v.tag)}</span>`:''}${esc(v.inten||'')}</div>${body('note')}`;
+ if(v.type==='fight'){const sc=(l,k)=>v[k]?`<div style="margin-top:4px"><span class="tag">${l}</span>${esc(v[k])}</div>`:'';
+ h=`<div class="row"><h3>🩹 ${esc(v.date)} ${v.level?`<span class="tag">${esc(v.level)}</span>`:''}</h3>${by}</div>${sc('起因','cause')}${sc('我的感受','feelA')}${sc('TA的感受','feelB')}${sc('真正想要','need')}${sc('和好','fix')}${sc('下次','learn')}${sc('约定','promise')}${v.dur?`<div class="stamp" style="margin-top:6px">和好用时：${esc(v.dur)}</div>`:''}`}
  if(v.type==='food')h=`${v.img?`<img src="${v.img}" alt="" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:6px;float:right;margin-left:8px">`:''}<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(v.addr||'')} ${by}</div>${body('note')}${navLinks(v)}`;
  return `<div class="card" onclick="openForm('${v.type}','${v.id}')">${h}</div>`;
 }
@@ -200,6 +204,9 @@ function view(){
  if(tab==='home')return home();
  if(tab==='tl')return tlView();
  if(tab==='photo')return photoView();
+ if(tab==='mood')return moodView();
+ if(tab==='plan')return planView();
+ if(tab==='fight')return fightView();
  if(tab==='food')return foodView();
  const a=dsort(rec(tab));
  if(!a.length)return empty();
@@ -265,6 +272,7 @@ function go(k){tab=k;render();scrollTo(0,0)}
 $('#fab').onclick=()=>{if(tab==='food'&&AMAP.key){const q=$('#sq');if(q){q.scrollIntoView({block:'center'});q.focus();return}}openForm(tab==='tl'?'event':tab)};
 
 function openForm(type,id,pos){
+ if(type==='letter'&&id&&!(pos&&pos.edit))return openLetter(id);
  const t=T[type],d=id?items[id]:((pos&&pos.pre)||{});cur={type,id,img:d.img||'',x:d.x!=null?d.x:(pos&&pos.x),y:d.y!=null?d.y:(pos&&pos.y),lng:d.lng!=null?d.lng:(pos&&pos.lng),lat:d.lat!=null?d.lat:(pos&&pos.lat)};
  const f=t.f.map(([k,l,kind,o])=>{
   const v=d[k]!==undefined?d[k]:(kind==='d'&&k==='date'?td():'');
@@ -298,6 +306,7 @@ function submit(){
  if(cur.type==='place'||cur.type==='food')o.star=['★','★★','★★★','★★★★','★★★★★'][o.star];
  if(cur.type==='food'&&cur.x!=null){o.x=cur.x;o.y=cur.y}
  if((cur.type==='food'||cur.type==='photo')&&cur.lng!=null){o.lng=cur.lng;o.lat=cur.lat}
+ if(cur.type==='letter'&&!o.date)o.date=(items[cur.id]||{}).date||td();
  if(cur.type==='photo'){o.prov=cur.prov||'';o.time=cur.time||'';o.ad=cur.ad||'';o.dist=cur.dist||'';o.poi=cur.poi||'';o.fn=cur.fn||''}
  if(cur.type==='food'&&!o.name){toast('请填写店名');return}
  if(t.f.some(x=>x[0]==='title')&&cur.type!=='diary'&&!o.title&&cur.type!=='plan'){toast('请填写标题');return}
@@ -677,6 +686,41 @@ function photoView(){
  return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片</div>
  <div id="fwrap" style="position:relative;width:100%;padding-top:110%;background:var(--card);border:1px solid var(--line);border-radius:4px"><div id="fslot" style="position:absolute;left:20%;top:22.7%;width:60%;height:54.5%"><div class="mapph" style="height:100%;aspect-ratio:auto">🗺️ 地图加载中…</div></div><button class="locb" style="top:8px;right:8px;z-index:6;width:auto;border-radius:18px;padding:0 14px;font-size:14px" onclick="openFull()">⛶ 全屏地图</button><svg id="flines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></svg>${tiles}</div>
  <p class="mut" style="text-align:center">点右上角“全屏地图”可以大图查看、放大到街道，照片会以缩略图标在地图上，靠得近的会合并成数字；去过的省、市、区县会涂上颜色</p>${wall}`;
+}
+const PAPER={'米色信纸':'#f6ecd3','格子信纸':'#f4f1e6','牛皮纸':'#d8bf94','淡粉信纸':'#f8e1e4'};
+function togCk(id,i){const v=items[id],c=new Set((v.ck||'').split(',').filter(Boolean)),k=String(i);c.has(k)?c.delete(k):c.add(k);save(id,{...v,ck:[...c].join(',')})}
+function openLetter(id){
+ const v=items[id];if(!v)return;
+ if(v.open&&dd(v.open)>0){toast('还没到拆封的日子，还有 '+dd(v.open)+' 天');return}
+ let me2='';try{me2=localStorage.getItem('by')||''}catch(e){}
+ if(me2&&me2!==v.by&&!v.read)save(id,{...v,read:td()});
+ $('#dlg').innerHTML=`<div style="background:${PAPER[v.paper]||PAPER['米色信纸']};color:#3b2f25;padding:16px;border-radius:4px;animation:unf .5s ease-out;transform-origin:top"><div style="display:flex;justify-content:space-between"><div style="font:11px 'Courier New',monospace;opacity:.65">POST · ${esc(v.date||'')}</div><div style="font-size:30px">${esc(v.stamp||'❤️')}</div></div><h3 style="color:#3b2f25">${esc(v.title)}</h3><div style="white-space:pre-wrap;line-height:28px;${v.paper==='格子信纸'?'background-image:repeating-linear-gradient(transparent,transparent 27px,rgba(0,0,0,.12) 28px);':''}">${esc(v.text)}</div><div style="text-align:right;margin-top:10px;font-style:italic">— ${esc(v.by||'')}</div></div><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button> <button class="btn" onclick="$('#dlg').close();openForm('letter','${id}',{edit:1})">编辑/删除</button></p>`;
+ $('#dlg').showModal();
+}
+let mm='';
+function shiftM(n){const [Y,M]=mm.split('-').map(Number),d=new Date(Y,M-1+n,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function moodView(){
+ if(!mm)mm=td().slice(0,7);
+ const [Y,M]=mm.split('-').map(Number),ms=rec('mood').filter(v=>(v.date||'').startsWith(mm)),dim=new Date(Y,M,0).getDate(),fw=(new Date(Y,M-1,1).getDay()+6)%7;
+ const col=['#4a6fa5','#6b8fb8','#8a8a8a','#e0a65a','#c0392b'],by={};
+ ms.forEach(v=>{const d=+v.date.slice(8);(by[d]=by[d]||[]).push(v)});
+ let cells='';for(let i=0;i<fw;i++)cells+='<div></div>';
+ for(let d=1;d<=dim;d++){const l=by[d],a=l?Math.round(l.reduce((t,v)=>t+v.score,0)/l.length):null;
+  cells+=`<div onclick="openForm('mood',null,{pre:{date:'${mm}-${String(d).padStart(2,'0')}'}})" style="aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;background:${a==null?'var(--card)':col[a]};color:${a==null?'var(--mut)':'#fff'};border:1px solid var(--line)">${a==null?d:MO[a]}</div>`}
+ const st=who().map(n=>{const l=ms.filter(v=>v.by===n);return esc(n)+' '+(l.length?'平均'+MO[Math.round(l.reduce((t,v)=>t+v.score,0)/l.length)]+' · '+l.length+'次':'暂无')}).join('　');
+ const tg={};ms.forEach(v=>{if(v.tag)tg[v.tag]=(tg[v.tag]||0)+1});const top=Object.entries(tg).sort((a,b)=>b[1]-a[1])[0];
+ return `<div class="card static"><div class="row" style="align-items:center"><button class="btn o" onclick="mm=shiftM(-1);render()">‹</button><b>${Y}年${M}月</b><button class="btn o" onclick="mm=shiftM(1);render()">›</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;text-align:center" class="mut">${['一','二','三','四','五','六','日'].map(x=>`<div>${x}</div>`).join('')}${cells}</div><p class="mut" style="margin:8px 0 0">${st}${top?'　最常见：'+esc(top[0]):''}</p><p class="mut" style="margin:4px 0 0">点日期格子可以直接记那一天的心情；颜色越暖心情越好</p></div>${ms.length?dsort(ms).map(card).join(''):empty()}`;
+}
+function planView(){
+ const a=rec('plan'),up=a.filter(v=>!v.done&&v.date).sort((x,y)=>x.date<y.date?-1:1),nd=a.filter(v=>!v.done&&!v.date),dn=a.filter(v=>v.done).sort((x,y)=>(y.date||'')<(x.date||'')?-1:1);
+ const bud=a.filter(v=>!v.done).reduce((t,v)=>t+(parseFloat((v.budget||'').replace(/[^\d.]/g,''))||0),0),wish=a.filter(v=>v.kind==='心愿清单');
+ const sec=(t,l)=>l.length?`<h3 style="margin:14px 0 8px">${t}</h3>${l.map(card).join('')}`:'';
+ return a.length?`<div class="card static" style="text-align:center">待办 <b>${up.length+nd.length}</b> · 已完成 <b>${dn.length}</b> · 心愿 <b>${wish.filter(v=>v.done).length}/${wish.length}</b>${bud?' · 待办预算 <b>¥'+bud+'</b>':''}</div>${sec('📅 即将到来',up)}${sec('🌱 还没定日期',nd)}${sec('✅ 已完成',dn)}`:empty();
+}
+function fightView(){
+ const a=dsort(rec('fight'));if(!a.length)return empty();
+ const dur={};a.forEach(v=>{if(v.dur)dur[v.dur]=(dur[v.dur]||0)+1});const ok=a.filter(v=>v.dur&&v.dur!=='还没和好').length;
+ return `<div class="card static" style="text-align:center">共 <b>${a.length}</b> 次复盘 · 已和好 <b>${ok}</b>${Object.keys(dur).length?`<div style="margin-top:6px">${Object.entries(dur).map(([k,n])=>`<span class="tag">${esc(k)} ×${n}</span>`).join('')}</div>`:''}<div class="mut" style="margin-top:6px">把“真正想要的”和“下次怎么做”写下来，就是在一起的成长。</div></div>${a.map(card).join('')}`;
 }
 function mapTap(e){
  if(!placing)return;
