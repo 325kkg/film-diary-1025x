@@ -503,21 +503,28 @@ function geoPlace(t){
 }
 const X0=73.3,YT=53.7,CC=.8131,KK=11.9,OX=200,OY=335;
 const PX=(a,b)=>[(a-X0)*CC*KK+OX,(YT-b)*KK+OY];
-let provs=[],cities={},cityBusy={},cnBusy=false,cnProg=0;
+let provs=[],cities={},cityBusy={},cnBusy=false,cnProg=0,cnErr='',cnTried=false;
+const tmo=(p,ms)=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error('超时')),ms))]);
+function cnRetry(){cnTried=false;cnErr='';cnProg=0;if(provs.length<30)provs=[];loadCN()}
 const dsP=(kw,sub,ext)=>new Promise(r=>new AMap.DistrictSearch({subdistrict:sub,extensions:ext}).search(kw,(st,res)=>r(st==='complete'&&res.districtList&&res.districtList[0]||null)));
 function rp(bs,st){return bs.map(g=>{if(!g.some(p=>p.lat>17.6))return '';const o=[];let l=null;g.forEach((p,i)=>{if(!l||Math.hypot(p.lng-l.lng,p.lat-l.lat)>=st||i===g.length-1){const q=PX(p.lng,p.lat);o.push(q[0].toFixed(1)+','+q[1].toFixed(1));l=p}});return o.length>3?'M'+o.join('L')+'Z':''}).join('')}
 function bbox(bs){let a=1e9,b=1e9,c=-1e9,d=-1e9;bs.forEach(g=>g.forEach(p=>{if(p.lat<17.6)return;const q=PX(p.lng,p.lat);a=Math.min(a,q[0]);c=Math.max(c,q[0]);b=Math.min(b,q[1]);d=Math.max(d,q[1])}));return [a,b,c,d]}
 async function loadCN(){
- if(provs.length||cnBusy||!window.AMap||!AMap.DistrictSearch)return;
- try{const c=JSON.parse(localStorage.getItem('cnp2')||'null');if(c&&c.length){provs=c;render();return}}catch(e){}
- cnBusy=true;
- const top=await dsP('中国',1,'base');if(!top){cnBusy=false;return}
- const list=top.districtList.filter(p=>p.adcode),out=[];
- for(let i=0;i<list.length;i+=4){
-  await Promise.all(list.slice(i,i+4).map(async p=>{const d=await dsP(p.adcode,0,'all');if(d&&d.boundaries)out.push({n:p.name,a:String(p.adcode),d:rp(d.boundaries,.06),c:PX(p.center.lng,p.center.lat),bb:bbox(d.boundaries)})}));
-  cnProg=out.length;if(i%8===0)render();
- }
- provs=out;try{localStorage.setItem('cnp2',JSON.stringify(out))}catch(e){}
+ if(cnTried||cnBusy||!window.AMap||!AMap.DistrictSearch)return;
+ try{const c=JSON.parse(localStorage.getItem('cnp2')||'null');if(c&&c.length>=30){provs=c;cnTried=true;render();return}}catch(e){}
+ cnTried=true;cnBusy=true;cnErr='';
+ try{
+  const top=await tmo(dsP('中国',1,'base'),15000);if(!top)throw new Error('获取省份列表失败');
+  const list=top.districtList.filter(p=>p.adcode),out=[];
+  for(let i=0;i<list.length;i+=3){
+   await Promise.all(list.slice(i,i+3).map(async p=>{
+    try{const d=await tmo(dsP(p.adcode,0,'all'),25000);
+     if(d&&d.boundaries){const c=p.center||d.center;out.push({n:p.name,a:String(p.adcode),d:rp(d.boundaries,.06),c:c?PX(c.lng,c.lat):[500,600],bb:bbox(d.boundaries)})}else cnErr+=p.name+'无数据 '}
+    catch(e){cnErr+=p.name+':'+(e.message||'失败')+' '}}));
+   cnProg=out.length;provs=out.slice();render();
+  }
+  if(out.length>=30)try{localStorage.setItem('cnp2',JSON.stringify(out))}catch(e){}
+ }catch(e){cnErr=e.message||String(e)}
  cnBusy=false;render();
 }
 async function loadCities(pa){
@@ -567,7 +574,7 @@ function photoView(){
  const ph=dsort(rec('photo')),vp=new Set(),vc=new Set();
  ph.forEach(v=>{if(v.ad){vp.add(v.ad.slice(0,2)+'0000');vc.add(v.ad);vc.add(v.ad.slice(0,4)+'00')}else if(v.prov){const p=provs.find(p=>p.n===v.prov);if(p)vp.add(p.a)}});
  const z=1000/vb[2],nm=t=>esc(t.replace(/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区|地区|自治州|盟)$/,''));
- let board='<div class="mapph">🗺️ 足迹地图加载中…'+(cnProg?' '+cnProg+'/'+34:'')+'</div>';
+ let board='<div class="mapph" onclick="cnRetry()">🗺️ '+(cnBusy?'足迹地图加载中… '+cnProg+'/34':'点这里重新加载地图')+'</div>';
  if(provs.length){
   let pd='',pl='',cd='',cl='',ln='',pn='',tl='';
   provs.forEach(p=>{pd+=`<path d="${p.d}" style="fill:${vp.has(p.a)?'#e9c27c':'#dcc59c'}" stroke="#a88a55" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;pl+=`<text class="plb" x="${p.c[0].toFixed(0)}" y="${p.c[1].toFixed(0)}" text-anchor="middle" font-size="${24/z}" style="fill:#5a4630;pointer-events:none">${nm(p.n)}</text>`});
@@ -584,7 +591,7 @@ function photoView(){
   board=`<div style="position:relative"><svg id="mapsv" viewBox="${vb.join(' ')}" width="100%" style="display:block;background:var(--card);border:1px solid var(--line);border-radius:4px;touch-action:${vb[2]<999?'none':'pan-y'}" onpointerdown="mpd(event)" onpointermove="mpm(event)" onpointerup="mpu(event)" onpointercancel="mpu(event)" onwheel="mwh(event)"><g>${pd}</g><g id="lc" style="display:${z>=2.4?'':'none'}">${cd}</g>${ln}<g>${pl}${cl}</g>${pn}${tl}</svg><div class="zb"><button onclick="zbtn(1.6)">＋</button><button onclick="zbtn(.625)">－</button><button onclick="zbtn(0)">⟲</button></div></div><p class="mut" style="text-align:center">双指或＋－缩放地图，放大后显示更详细的地区；颜色深的是去过的地方</p>`;
  }
  const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
- return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${ph.length}</b> 张照片</div>${board}${wall}`;
+ return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${ph.length}</b> 张照片</div>${board}${cnBusy&&provs.length?`<p class="mut" style="text-align:center">地图加载中… ${cnProg}/34</p>`:''}${cnErr?`<p class="mut" style="text-align:center;word-break:break-all">部分地区加载失败：${esc(cnErr)} <a href="#" onclick="cnRetry();return false">重试</a></p>`:''}${wall}`;
 }
 function mapTap(e){
  if(!placing)return;
