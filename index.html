@@ -509,7 +509,7 @@ function cnRetry(){cnTried=false;cnErr='';cnProg=0;if(provs.length<30)provs=[];l
 const dsP=(kw,sub,ext)=>new Promise(r=>new AMap.DistrictSearch({subdistrict:sub,extensions:ext}).search(kw,(st,res)=>r(st==='complete'&&res.districtList&&res.districtList[0]||null)));
 function rp(bs,st){return bs.map(g=>{if(!g.some(p=>p.lat>17.6))return '';const o=[];let l=null;g.forEach((p,i)=>{if(!l||Math.hypot(p.lng-l.lng,p.lat-l.lat)>=st||i===g.length-1){const q=PX(p.lng,p.lat);o.push(q[0].toFixed(1)+','+q[1].toFixed(1));l=p}});return o.length>3?'M'+o.join('L')+'Z':''}).join('')}
 function bbox(bs){let a=1e9,b=1e9,c=-1e9,d=-1e9;bs.forEach(g=>g.forEach(p=>{if(p.lat<17.6)return;const q=PX(p.lng,p.lat);a=Math.min(a,q[0]);c=Math.max(c,q[0]);b=Math.min(b,q[1]);d=Math.max(d,q[1])}));return [a,b,c,d]}
-async function loadCN(){
+async function loadCNamap(){
  if(cnTried||cnBusy||!window.AMap||!AMap.DistrictSearch)return;
  try{const c=JSON.parse(localStorage.getItem('cnp2')||'null');if(c&&c.length>=30){provs=c;cnTried=true;render();return}}catch(e){}
  cnTried=true;cnBusy=true;cnErr='';
@@ -527,24 +527,49 @@ async function loadCN(){
  }catch(e){cnErr=e.message||String(e)}
  cnBusy=false;render();
 }
+async function gj(code){const c=new AbortController(),t=setTimeout(()=>c.abort(),20000);try{const r=await fetch('https://geo.datav.aliyun.com/areas_v3/bound/'+code+'.json',{signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
+function bboxR(rs){let a=1e9,b=1e9,c=-1e9,d=-1e9;rs.forEach(g=>g.forEach(p=>{const q=PX(p[0],p[1]);a=Math.min(a,q[0]);c=Math.max(c,q[0]);b=Math.min(b,q[1]);d=Math.max(d,q[1])}));return [a,b,c,d]}
+function feat(f,st){
+ const g=f.geometry,rs=(g.type==='Polygon'?g.coordinates:g.type==='MultiPolygon'?g.coordinates.flat():[]).filter(r=>r.some(p=>p[1]>17.6)),pr=f.properties||{},c=pr.center||pr.centroid;
+ const d=rs.map(r=>{const o=[];let l=null;r.forEach((p,i)=>{if(!l||Math.hypot(p[0]-l[0],p[1]-l[1])>=st||i===r.length-1){const q=PX(p[0],p[1]);o.push(q[0].toFixed(1)+','+q[1].toFixed(1));l=p}});return o.length>3?'M'+o.join('L')+'Z':''}).join('');
+ return {n:pr.name,a:String(pr.adcode),d,c:c?PX(c[0],c[1]):[500,600],bb:bboxR(rs)};
+}
+async function loadCN(){
+ if(cnTried||cnBusy)return;
+ try{const c=JSON.parse(localStorage.getItem('cnp3')||'null');if(c&&c.length>=30){provs=c;cnTried=true;render();return}}catch(e){}
+ cnTried=true;cnBusy=true;cnErr='';
+ try{
+  const g=await gj('100000_full');
+  const out=g.features.filter(f=>f.geometry&&/^\d+$/.test(String(f.properties.adcode))).map(f=>feat(f,.05));
+  if(out.length<30)throw new Error('数据不完整');
+  provs=out;cnProg=out.length;try{localStorage.setItem('cnp3',JSON.stringify(out))}catch(e){}
+ }catch(e){
+  cnBusy=false;cnTried=false;
+  if(window.AMap&&AMap.DistrictSearch){cnErr='';await loadCNamap();return}
+  cnErr=e.message||'加载失败';
+ }
+ cnBusy=false;render();
+}
 async function loadCities(pa){
- if(cities[pa]||cityBusy[pa]||!window.AMap||!AMap.DistrictSearch)return;
- try{const c=JSON.parse(localStorage.getItem('cnc'+pa)||'null');if(c){cities[pa]=c;render();return}}catch(e){}
- cityBusy[pa]=1;toast('正在加载更详细的地区…');
- const top=await dsP(pa,1,'base'),list=top?top.districtList.filter(c=>c.adcode):[],out=[];
- for(let i=0;i<list.length;i+=4)await Promise.all(list.slice(i,i+4).map(async c=>{const d=await dsP(c.adcode,0,'all');if(d&&d.boundaries)out.push({n:c.name,a:String(c.adcode),d:rp(d.boundaries,.02),c:PX(c.center.lng,c.center.lat)})}));
- if(out.length){cities[pa]=out;try{localStorage.setItem('cnc'+pa,JSON.stringify(out))}catch(e){}}
+ if(cities[pa]||cityBusy[pa])return;
+ try{const c=JSON.parse(localStorage.getItem('cnc3'+pa)||'null');if(c){cities[pa]=c;render();return}}catch(e){}
+ cityBusy[pa]=1;
+ try{const g=await gj(pa+'_full'),out=g.features.filter(f=>f.geometry&&/^\d+$/.test(String(f.properties.adcode))).map(f=>feat(f,pa.endsWith('0000')?.02:.006));
+  cities[pa]=out;if(out.length)try{localStorage.setItem('cnc3'+pa,JSON.stringify(out))}catch(e){}}
+ catch(e){cities[pa]=[]}
  cityBusy[pa]=0;render();
 }
 const SL=[[40,30],[230,30],[420,30],[610,30],[800,30],[40,880],[230,880],[420,880],[610,880],[800,880],[15,270],[15,470],[15,670],[825,270],[825,470],[825,670]];
 let vb=[0,0,1000,1100],ptrs=new Map(),lodT=null,dragMoved=false;
-function lod(sv){const z=1000/vb[2],lc=sv.querySelector('#lc');
- if(lc)lc.style.display=z>=2.4?'':'none';
- sv.querySelectorAll('.pinc').forEach(c=>c.setAttribute('r',9/Math.sqrt(z)));
- sv.querySelectorAll('.plb').forEach(t=>{t.setAttribute('font-size',24/z);t.style.display=z<4?'':'none'});
- sv.querySelectorAll('.clb').forEach(t=>t.setAttribute('font-size',22/z));
+function lod(sv){const z=1000/vb[2],g=id=>sv.querySelector(id);
+ if(g('#lc'))g('#lc').style.display=z>=2.4?'':'none';
+ if(g('#ld'))g('#ld').style.display=z>=7?'':'none';
+ sv.querySelectorAll('.pinc').forEach(c=>c.setAttribute('r',6/z));
+ sv.querySelectorAll('.plb').forEach(t=>{t.setAttribute('font-size',24/z);t.style.display=z<5?'':'none'});
+ sv.querySelectorAll('.clb').forEach(t=>{t.setAttribute('font-size',22/z);t.style.display=z>=2.4&&z<12?'':'none'});
+ sv.querySelectorAll('.dlb').forEach(t=>{t.setAttribute('font-size',20/z);t.style.display=z>=7?'':'none'});
  sv.style.touchAction=vb[2]<999?'none':'pan-y'}
-function setVB(n,sv){const w=Math.min(1000,Math.max(60,n[2])),h=w*1.1;vb=[Math.min(Math.max(n[0],0),1000-w),Math.min(Math.max(n[1],0),1100-h),w,h];sv.setAttribute('viewBox',vb.join(' '));lod(sv);clearTimeout(lodT);lodT=setTimeout(afterZoom,300)}
+function setVB(n,sv){if(n.some(x=>!isFinite(x)))n=[0,0,1000,1100];const w=Math.min(1000,Math.max(12,n[2])),h=w*1.1;vb=[Math.min(Math.max(n[0],0),1000-w),Math.min(Math.max(n[1],0),1100-h),w,h];sv.setAttribute('viewBox',vb.join(' '));lod(sv);clearTimeout(lodT);lodT=setTimeout(afterZoom,300)}
 function zoomAt(f,px,py,sv){const w=vb[2]*f,h=vb[3]*f;setVB([px-(px-vb[0])*w/vb[2],py-(py-vb[1])*h/vb[3],w,h],sv)}
 function mpd(e){ptrs.set(e.pointerId,[e.clientX,e.clientY]);dragMoved=false}
 function mpm(e){
@@ -557,11 +582,12 @@ function mpm(e){
 function mpu(e){ptrs.delete(e.pointerId)}
 function mwh(e){e.preventDefault();const sv=e.currentTarget,r=sv.getBoundingClientRect(),sc=vb[2]/r.width;zoomAt(e.deltaY>0?1.25:.8,vb[0]+(e.clientX-r.left)*sc,vb[1]+(e.clientY-r.top)*sc,sv)}
 function zbtn(f){const sv=$('#mapsv');if(!sv)return;if(!f)setVB([0,0,1000,1100],sv);else zoomAt(1/f,vb[0]+vb[2]/2,vb[1]+vb[3]/2,sv)}
+function under(list,cx,cy){let b=null,ba=1e9;(list||[]).forEach(p=>{const q=p.bb;if(q&&cx>=q[0]&&cx<=q[2]&&cy>=q[1]&&cy<=q[3]){const a=(q[2]-q[0])*(q[3]-q[1]);if(a<ba){ba=a;b=p}}});return b}
 function afterZoom(){
- if(1000/vb[2]<2.4)return;
- const cx=vb[0]+vb[2]/2,cy=vb[1]+vb[3]/2;let b=null,ba=1e9;
- provs.forEach(p=>{const q=p.bb;if(q&&cx>=q[0]&&cx<=q[2]&&cy>=q[1]&&cy<=q[3]){const a=(q[2]-q[0])*(q[3]-q[1]);if(a<ba){ba=a;b=p}}});
- if(b)loadCities(b.a);
+ const z=1000/vb[2];if(z<2.4)return;
+ const cx=vb[0]+vb[2]/2,cy=vb[1]+vb[3]/2,p=under(provs,cx,cy);if(!p)return;
+ loadCities(p.a);
+ if(z>=7&&cities[p.a]){const c=under(cities[p.a],cx,cy);if(c)loadCities(c.a)}
 }
 function openPhotos(id){
  const v=items[id]||{},base=(v.fn||'').replace(/\.[^.]+$/,''),useName=/\d{3,}/.test(base)&&base.length>3,t=useName?base:(v.date||'');
@@ -571,14 +597,18 @@ function openPhotos(id){
 }
 function photoView(){
  loadCN();
- const ph=dsort(rec('photo')),vp=new Set(),vc=new Set();
- ph.forEach(v=>{if(v.ad){vp.add(v.ad.slice(0,2)+'0000');vc.add(v.ad);vc.add(v.ad.slice(0,4)+'00')}else if(v.prov){const p=provs.find(p=>p.n===v.prov);if(p)vp.add(p.a)}});
+ const ph=dsort(rec('photo')),vp=new Set(),vc=new Set(),vd=new Set();
+ ph.forEach(v=>{if(v.ad){vp.add(v.ad.slice(0,2)+'0000');vc.add(v.ad);vd.add(v.ad);vc.add(v.ad.slice(0,4)+'00')}else if(v.prov){const p=provs.find(p=>p.n===v.prov);if(p)vp.add(p.a)}});
  const z=1000/vb[2],nm=t=>esc(t.replace(/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区|地区|自治州|盟)$/,''));
  let board='<div class="mapph" onclick="cnRetry()">🗺️ '+(cnBusy?'足迹地图加载中… '+cnProg+'/34':'点这里重新加载地图')+'</div>';
  if(provs.length){
-  let pd='',pl='',cd='',cl='',ln='',pn='',tl='';
+  let pd='',pl='',cd='',cl='',dd='',dl='',ln='',pn='',tl='';
   provs.forEach(p=>{pd+=`<path d="${p.d}" style="fill:${vp.has(p.a)?'#e9c27c':'#dcc59c'}" stroke="#a88a55" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;pl+=`<text class="plb" x="${p.c[0].toFixed(0)}" y="${p.c[1].toFixed(0)}" text-anchor="middle" font-size="${24/z}" style="fill:#5a4630;pointer-events:none">${nm(p.n)}</text>`});
-  Object.values(cities).forEach(a=>a.forEach(c=>{cd+=`<path d="${c.d}" style="fill:${vc.has(c.a)?'#e0a65a':'none'}" stroke="#8a6d3b" stroke-width=".8" vector-effect="non-scaling-stroke"/>`;cl+=`<text class="clb" x="${c.c[0].toFixed(0)}" y="${c.c[1].toFixed(0)}" text-anchor="middle" font-size="${22/z}" style="fill:#4a3a22;pointer-events:none">${nm(c.n)}</text>`}));
+  Object.entries(cities).forEach(([k,a])=>a.forEach(c=>{
+   const isC=k.endsWith('0000'),vis=isC?vc.has(c.a):vd.has(c.a);
+   const pth=`<path d="${c.d}" style="fill:${vis?(isC?'#e0a65a':'#d4883a'):'none'}" stroke="${isC?'#8a6d3b':'#7a5d2b'}" stroke-width="${isC?.8:.6}" vector-effect="non-scaling-stroke"/>`;
+   const lb=(cl_,fs)=>`<text class="${cl_}" x="${c.c[0].toFixed(0)}" y="${c.c[1].toFixed(0)}" text-anchor="middle" font-size="${fs/z}" style="fill:#4a3a22;pointer-events:none">${nm(c.n)}</text>`;
+   if(isC){cd+=pth;cl+=lb('clb',22)}else{dd+=pth;dl+=lb('dlb',20)}}));
   const free=SL.map((_,i)=>i),pins=new Map();
   ph.filter(v=>v.lng!=null&&v.prov&&v.prov!=='境外').slice(0,16).forEach((v,n)=>{
    const p=PX(v.lng,v.lat);let bi=free[0],bd=1e9;free.forEach(i=>{const d=(SL[i][0]+80-p[0])**2+(SL[i][1]+95-p[1])**2;if(d<bd){bd=d;bi=i}});free.splice(free.indexOf(bi),1);
@@ -587,8 +617,8 @@ function photoView(){
    pins.set(v.lng.toFixed(2)+','+v.lat.toFixed(2),p);
    tl+=`<g transform="rotate(${(n%5-2)*1.2} ${cx} ${cy})" onclick="if(!dragMoved)openForm('photo','${v.id}')" style="cursor:pointer"><rect x="${sx}" y="${sy}" width="160" height="190" style="fill:var(--pol)" stroke="rgba(0,0,0,.2)"/><image href="${v.img||''}" x="${sx+8}" y="${sy+8}" width="144" height="144" preserveAspectRatio="xMidYMid slice"/><text x="${cx}" y="${sy+172}" text-anchor="middle" font-size="15" font-family="Courier New,monospace" style="fill:var(--ink)">${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,9))}</text><text x="${cx}" y="${sy+186}" text-anchor="middle" font-size="11" font-family="Courier New,monospace" style="fill:var(--mut)">${esc(v.date||'')}</text></g>`;
   });
-  pins.forEach(p=>{pn+=`<circle class="pinc" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${9/Math.sqrt(z)}" fill="#c0392b" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`});
-  board=`<div style="position:relative"><svg id="mapsv" viewBox="${vb.join(' ')}" width="100%" style="display:block;background:var(--card);border:1px solid var(--line);border-radius:4px;touch-action:${vb[2]<999?'none':'pan-y'}" onpointerdown="mpd(event)" onpointermove="mpm(event)" onpointerup="mpu(event)" onpointercancel="mpu(event)" onwheel="mwh(event)"><g>${pd}</g><g id="lc" style="display:${z>=2.4?'':'none'}">${cd}</g>${ln}<g>${pl}${cl}</g>${pn}${tl}</svg><div class="zb"><button onclick="zbtn(1.6)">＋</button><button onclick="zbtn(.625)">－</button><button onclick="zbtn(0)">⟲</button></div></div><p class="mut" style="text-align:center">双指或＋－缩放地图，放大后显示更详细的地区；颜色深的是去过的地方</p>`;
+  pins.forEach(p=>{pn+=`<circle class="pinc" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${6/z}" fill="#c0392b" stroke="#fff" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`});
+  board=`<div style="position:relative;width:100%;padding-top:110%"><svg id="mapsv" viewBox="${vb.join(' ')}" style="position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--card);border:1px solid var(--line);border-radius:4px;touch-action:${vb[2]<999?'none':'pan-y'}" onpointerdown="mpd(event)" onpointermove="mpm(event)" onpointerup="mpu(event)" onpointercancel="mpu(event)" onwheel="mwh(event)"><g>${pd}</g><g id="lc" style="display:${z>=2.4?'':'none'}">${cd}</g><g id="ld" style="display:${z>=7?'':'none'}">${dd}</g>${ln}<g>${pl}${cl}${dl}</g>${pn}${tl}</svg><div class="zb"><button onclick="zbtn(1.6)">＋</button><button onclick="zbtn(.625)">－</button><button onclick="zbtn(0)">⟲</button></div></div><p class="mut" style="text-align:center">双指或＋－缩放地图，放大后依次显示市、区县；颜色深的是去过的地方</p>`;
  }
  const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
  return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${ph.length}</b> 张照片</div>${board}${cnBusy&&provs.length?`<p class="mut" style="text-align:center">地图加载中… ${cnProg}/34</p>`:''}${cnErr?`<p class="mut" style="text-align:center;word-break:break-all">部分地区加载失败：${esc(cnErr)} <a href="#" onclick="cnRetry();return false">重试</a></p>`:''}${wall}`;
