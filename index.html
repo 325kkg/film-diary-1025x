@@ -72,6 +72,9 @@ textarea{min-height:80px}
 .ft{position:absolute;width:16%;box-sizing:border-box;background:var(--pol);padding:2.2%;box-shadow:1px 2px 5px rgba(0,0,0,.35);z-index:4;cursor:pointer}
 .ft img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:sepia(.3)}
 .ft div{font:8px/1.3 "Courier New",monospace;text-align:center;white-space:nowrap;overflow:hidden;color:var(--ink);margin-top:2px}
+#fsfull{position:fixed;inset:0;z-index:150;background:var(--bg);display:none}#fsfull.on{display:block}
+#fsbar{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;gap:10px;align-items:center;z-index:5;pointer-events:none}#fsbar>*{pointer-events:auto}
+#fstt{background:rgba(0,0,0,.6);color:#fff;padding:5px 12px;border-radius:14px;font-size:13px}
 </style>
 </head>
 <body>
@@ -607,14 +610,25 @@ function drawLines(){
   h+=`<line x1="${mr.left-wr.left+p.x}" y1="${mr.top-wr.top+p.y}" x2="${s2[0]/1000*wr.width}" y2="${s2[1]/1100*wr.height}" stroke="#a8803f" stroke-width="1" opacity=".6"/>`});
  sv.innerHTML=h;
 }
+let fullMode=false,fCl=null;
+function ensureF(){
+ if(fEl)return;
+ fEl=document.createElement('div');fEl.style.cssText='width:100%;height:100%;border:2px solid var(--ink);box-sizing:border-box;border-radius:4px';
+ fmap=new AMap.Map(fEl,{zoom:4,center:[104.5,36],resizeEnable:true});
+ ['mapmove','zoomchange','moveend','complete'].forEach(ev=>fmap.on(ev,drawLines));
+}
 function mountF(){
  const e=$('#fslot');if(!e||!window.AMap||!plugReady||!AMap.DistrictLayer)return;
- if(!fEl){
-  fEl=document.createElement('div');fEl.style.cssText='width:100%;height:100%;border:2px solid var(--ink);box-sizing:border-box;border-radius:4px';
-  fmap=new AMap.Map(fEl,{zoom:4,center:[104.5,36],resizeEnable:true});
-  ['mapmove','zoomchange','moveend','complete'].forEach(ev=>fmap.on(ev,drawLines));
- }
- e.innerHTML='';e.appendChild(fEl);
+ ensureF();
+ if(!fullMode){e.innerHTML='';e.appendChild(fEl)}
+ paintF();
+}
+function fpin(v,n){
+ const im=v.img?`<img src="${v.img}" style="width:100%;height:100%;object-fit:cover;display:block">`:'<div style="font-size:26px;line-height:48px;text-align:center;background:#efe4cf;height:100%">📷</div>';
+ return `<div style="position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid #c0392b"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div>${n>1?`<div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 16px sans-serif;text-shadow:0 1px 3px #000">${n}</div>`:''}<div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div></div>`;
+}
+function paintF(){
+ if(!fmap)return;
  const V=fVis,sig=[...V.vp,'|',...V.vc,'|',...V.vd].join(',');
  if(sig!==fSig){
   fSig=sig;fLayers.forEach(l=>fmap.remove(l));fLayers=[];
@@ -625,9 +639,29 @@ function mountF(){
   [...V.vp].forEach(pa=>{const P=new AMap.DistrictLayer.Province({adcode:[pa],depth:2,zIndex:11,styles:st});fmap.add(P);fLayers.push(P)});
  }
  fMks.forEach(m=>fmap.remove(m));fMks=[];
+ if(fullMode){
+  const pts=dsort(rec('photo')).filter(v=>v.lng!=null).map(v=>({lnglat:[v.lng,v.lat],id:v.id,v}));
+  if(fCl)fCl.setData(pts);
+  else{fCl=new AMap.MarkerCluster(fmap,pts,{gridSize:70,maxZoom:17,
+   renderClusterMarker:c=>{c.marker.setContent(fpin(c.clusterData[0].v,c.count));c.marker.setOffset(new AMap.Pixel(-30,-70))},
+   renderMarker:c=>{c.marker.setContent(fpin(c.data[0].v,0));c.marker.setOffset(new AMap.Pixel(-30,-70))}});
+   fCl.on('click',e=>{const d=e.clusterData||[];if(d.length>1)fmap.setZoomAndCenter(Math.min(fmap.getZoom()+2,18),e.lnglat||d[0].lnglat);else if(d[0])openForm('photo',d[0].id)})}
+  return;
+ }
+ if(fCl)fCl.setData([]);
  fPh.forEach(v=>{const m=new AMap.Marker({position:[v.lng,v.lat],anchor:'center',zIndex:50,content:'<div style="width:9px;height:9px;border-radius:50%;background:#c0392b;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5)"></div>'});fmap.add(m);fMks.push(m)});
  setTimeout(drawLines,50);
 }
+function openFull(){
+ if(!fmap||!fEl){toast('地图还没加载好，请稍等');return}
+ let o=$('#fsfull');
+ if(!o){o=document.createElement('div');o.id='fsfull';o.innerHTML='<div id="fsslot" style="position:absolute;inset:0"></div><div id="fsbar"><button class="btn" onclick="closeFull()">✕ 关闭</button><span id="fstt"></span></div><button class="locb" style="position:absolute;top:auto;right:16px;bottom:calc(30px + env(safe-area-inset-bottom,0px));width:52px;height:52px" onclick="fMe()">◎</button>';document.body.appendChild(o)}
+ fullMode=true;o.classList.add('on');$('#fsslot').appendChild(fEl);fEl.style.border='0';fEl.style.borderRadius='0';
+ $('#fstt').textContent='已点亮 '+fVis.vp.size+' 个省 · '+fVis.vc.size+' 个市';
+ setTimeout(()=>{window.dispatchEvent(new Event('resize'));paintF()},60);
+}
+function closeFull(){fullMode=false;const o=$('#fsfull');if(o)o.classList.remove('on');if(fEl){fEl.style.border='2px solid var(--ink)';fEl.style.borderRadius='4px'}render()}
+function fMe(){if(me&&fmap)fmap.setZoomAndCenter(15,me);else locateNow(true)}
 function photoView(){
  const ph=dsort(rec('photo')),vp=new Set(),vc=new Set(),vd=new Set();
  ph.forEach(v=>{if(v.ad){vp.add(v.ad.slice(0,2)+'0000');vc.add(v.ad.slice(0,4)+'00');vd.add(v.ad)}});
@@ -641,8 +675,8 @@ function photoView(){
   return `<div class="ft" style="left:${sx/10}%;top:${sy/11}%;transform:rotate(${(n%5-2)*1.2}deg)" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="">`:''}<div>${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,7))}</div></div>`}).join('');
  const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
  return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片</div>
- <div id="fwrap" style="position:relative;width:100%;padding-top:110%;background:var(--card);border:1px solid var(--line);border-radius:4px"><div id="fslot" style="position:absolute;left:20%;top:22.7%;width:60%;height:54.5%"><div class="mapph" style="height:100%;aspect-ratio:auto">🗺️ 地图加载中…</div></div><svg id="flines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></svg>${tiles}</div>
- <p class="mut" style="text-align:center">用手指缩放、拖动地图，可以一直放大到街道；去过的省、市、区县会涂上颜色</p>${wall}`;
+ <div id="fwrap" style="position:relative;width:100%;padding-top:110%;background:var(--card);border:1px solid var(--line);border-radius:4px"><div id="fslot" style="position:absolute;left:20%;top:22.7%;width:60%;height:54.5%"><div class="mapph" style="height:100%;aspect-ratio:auto">🗺️ 地图加载中…</div></div><button class="locb" style="top:8px;right:8px;z-index:6;width:auto;border-radius:18px;padding:0 14px;font-size:14px" onclick="openFull()">⛶ 全屏地图</button><svg id="flines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></svg>${tiles}</div>
+ <p class="mut" style="text-align:center">点右上角“全屏地图”可以大图查看、放大到街道，照片会以缩略图标在地图上，靠得近的会合并成数字；去过的省、市、区县会涂上颜色</p>${wall}`;
 }
 function mapTap(e){
  if(!placing)return;
