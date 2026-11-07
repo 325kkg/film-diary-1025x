@@ -330,7 +330,7 @@ function loadAMap(){
   const s0=startCenter();amap=new AMap.Map(mEl,{zoom:s0.z,center:s0.c,resizeEnable:true});
   amap.on('moveend',()=>{try{const c=amap.getCenter();localStorage.setItem('mapc',JSON.stringify({c:[c.lng,c.lat],z:amap.getZoom()}))}catch(e){}});
   render();
-  AMap.plugin(['AMap.MarkerCluster','AMap.AutoComplete','AMap.PlaceSearch','AMap.Geocoder','AMap.CitySearch'],()=>{plugReady=true;drawMarkers();locateNow(false)});
+  AMap.plugin(['AMap.MarkerCluster','AMap.AutoComplete','AMap.PlaceSearch','AMap.Geocoder','AMap.CitySearch'],()=>{plugReady=true;drawMarkers();if(window.AMap&&AMap.CitySearch)locFail(null,false)});
  };
  sc.onerror=()=>{amapState=3;render()};
  document.head.appendChild(sc);
@@ -421,7 +421,9 @@ function setMe(lng,lat){
 function locFail(e,gesture){
  if(window.AMap&&AMap.CitySearch&&!myCity)new AMap.CitySearch().getLocalCity((st,r)=>{if(st==='complete'&&typeof r.city==='string'&&r.city){myCity=r.city;if(gesture)toast('无法精确定位，已按所在城市“'+r.city+'”为你搜索')}});
  if(!gesture)return;
- alert(e&&e.code===1?'定位被拒绝。请到 设置 → 隐私与安全性 → 定位服务，打开定位，并在“Safari 网站”（或本网页对应的那一项）里选“使用期间”，再回来点一次定位按钮。':e&&e.code===3?'定位超时，请到信号好的地方再点一次。':'暂时获取不到位置，请确认已开启定位服务。');
+ const code=e?e.code:0,where=window.navigator.standalone?'主屏幕版本':'Safari 网页';
+ const q=navigator.permissions?navigator.permissions.query({name:'geolocation'}).then(r=>r.state,()=>'未知'):Promise.resolve('未知');
+ q.then(ps=>alert(`定位失败（在${where}中）\n错误码：${code}${e&&e.message?'（'+e.message+'）':''}\n系统权限状态：${ps}\n\n`+(code===1?'系统拒绝了本网页的定位请求。\n①设置 → 隐私与安全性 → 定位服务：总开关打开，并在“Safari 网站”（或本网页对应的那一项）里选“使用期间”。\n②如果你是从主屏幕图标进入的：先从多任务里彻底划掉，重新打开，再点一次定位按钮，在弹窗里选“允许”。':code===3?'定位超时，请到信号好的地方再点一次。':'暂时获取不到位置，请确认已开启定位服务。')));
 }
 function toMe(p){AMap.convertFrom([p.coords.longitude,p.coords.latitude],'gps',(st,r)=>{if(r&&r.info==='ok'&&r.locations&&r.locations[0])setMe(r.locations[0].lng,r.locations[0].lat)})}
 function locateNow(gesture){
