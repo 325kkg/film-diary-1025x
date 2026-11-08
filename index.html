@@ -5,7 +5,9 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://webapi.amap.com">
 <link rel="dns-prefetch" href="https://restapi.amap.com">
-<link rel="dns-prefetch" href="https://vdata.amap.com">
+<link rel="preconnect" href="https://vdata.amap.com" crossorigin>
+<link rel="preconnect" href="https://webrd01.is.autonavi.com" crossorigin>
+<link rel="preconnect" href="https://webrd02.is.autonavi.com" crossorigin>
 <meta name="theme-color" content="#3b2f25">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -114,6 +116,11 @@ function toast(m){const e=document.createElement('div');e.className='toast';e.te
 async function save(id,d){items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
 async function del(id){delete items[id];render();if(col)try{await col.doc(id).delete()}catch(e){toast('删除失败')}}
 
+const T0=performance.now(),tm={};let RASTER=true;try{RASTER=localStorage.getItem('raster')!=='0'}catch(e){}
+const RTILE='https://webrd0{1,2,3,4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=[x]&y=[y]&z=[z]';
+function mapOpts(o){const r={...o,resizeEnable:true,features:['bg','road','point']};if(RASTER)r.layers=[new AMap.TileLayer({getTileUrl:RTILE,zIndex:2})];return r}
+function tmText(){return '加载耗时（秒）：'+[['data','数据'],['engine','地图引擎'],['tiles','地图画面'],['plug','标记组件']].map(([k,n])=>n+(tm[k]?(tm[k]/1000).toFixed(1):'…')).join(' · ')+(RASTER?' · 极速底图':' · 矢量底图')}
+function tmShow(){const e=document.getElementById('tmline');if(e)e.textContent=tmText()}
 const CFG={url:"https://ojrtyldgmmdvzenqopov.supabase.co",key:"sb_publishable_Gm_LvG63Ku2suaNmV_5AWg_eDRwVbMT"};
 const LOGIN_EMAIL="love@our-diary.app";
 const CONFIGURED=!/粘贴/.test(CFG.url);
@@ -163,7 +170,7 @@ async function loadAll(){
   if(items.cfg&&items.cfg.key){AMAP.key=items.cfg.key;AMAP.sec=items.cfg.sec;try{localStorage.setItem('amcfg',JSON.stringify(items.cfg))}catch(e){}loadAMap()}
   if(items.appicon&&items.appicon.u)applyIcon(items.appicon.u);
  }catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
- loading=false;ready=true;if(changed)render();
+ loading=false;ready=true;if(!tm.data){tm.data=performance.now()-T0;tmShow()}if(changed){render();backfill()}
 }
 function startSync(){vers={};col=shim;setTimeout(preloadMap,0);loadAll();poll=setInterval(()=>{if(!document.hidden)loadAll()},15000)}
 function stopSync(){if(poll){clearInterval(poll);poll=null}col=null;items={};meta=null}
@@ -239,7 +246,7 @@ function home(){
  <div class="card static"><h3>🎲 回忆盲盒</h3><div id="box" class="mut">随机抽一段你们的回忆</div><p><button class="btn o" onclick="blind()">抽一张</button></p></div>
  ${moodChart()}
  <div class="card static"><h3>📊 我们的数据</h3>日记 ${rec('diary').length} 篇 · 照片 ${rec('photo').length} 张 · 情话 ${rec('letter').length} 封 · 足迹 ${ps.length} 处 · 复盘 ${rec('fight').length} 次</div>
- <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改密码</button> <button class="btn o" onclick="iconPick()">设置图标</button></p>`;
+ <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改密码</button> <button class="btn o" onclick="iconPick()">设置图标</button> <button class="btn o" onclick="toggleRaster()">切换地图底图</button></p>`;
 }
 function moodChart(){
  const a=dsort(rec('mood')).reverse().slice(-14);
@@ -347,12 +354,12 @@ function loadAMap(){
  window._AMapSecurityConfig={securityJsCode:AMAP.sec};
  const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key;
  sc.onload=()=>{
-  amapState=2;mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';
-  const s0=startCenter();amap=new AMap.Map(mEl,{zoom:s0.z,center:s0.c,resizeEnable:true,features:['bg','road','point']});
+  amapState=2;tm.engine=performance.now()-T0;tmShow();mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';
+  const s0=startCenter();amap=new AMap.Map(mEl,mapOpts({zoom:s0.z,center:s0.c}));amap.on('complete',()=>{tm.tiles=performance.now()-T0;tmShow()});
   amap.on('moveend',()=>{try{const c=amap.getCenter();localStorage.setItem('mapc',JSON.stringify({c:[c.lng,c.lat],z:amap.getZoom()}))}catch(e){}});
   render();
-  AMap.plugin(['AMap.MarkerCluster','AMap.DistrictLayer'],()=>{plugReady=true;drawMarkers()});
-  AMap.plugin(['AMap.AutoComplete','AMap.PlaceSearch','AMap.Geocoder','AMap.CitySearch'],()=>{if(!myCity)locFail(null,false)});
+  AMap.plugin(['AMap.MarkerCluster','AMap.DistrictLayer'],()=>{plugReady=true;tm.plug=performance.now()-T0;tmShow();drawMarkers()});
+  AMap.plugin(['AMap.AutoComplete','AMap.PlaceSearch','AMap.Geocoder','AMap.CitySearch'],()=>{if(!myCity)locFail(null,false);backfill()});
  };
  sc.onerror=()=>{amapState=3;render()};
  document.head.appendChild(sc);
@@ -425,7 +432,7 @@ function foodView(){
  return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
  <div style="display:flex;gap:6px;margin-bottom:8px">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}</div>
  ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
- <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p>
+ <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p><p class="mut" id="tmline" style="font-size:11px;margin-top:-6px">${tmText()}</p>
  ${s?card({...s,id:sel}):''}
  ${a.length?a.map(card).join(''):empty()}`;
 }
@@ -470,6 +477,7 @@ function tlView(){
  return h+'</div>';
 }
 function applyIcon(u){let l=document.querySelector('link[rel="apple-touch-icon"]');if(!l){l=document.createElement('link');l.rel='apple-touch-icon';document.head.appendChild(l)}l.href=u}
+function toggleRaster(){RASTER=!RASTER;try{localStorage.setItem('raster',RASTER?'1':'0')}catch(e){}alert('已切换为：'+(RASTER?'极速底图':'矢量底图')+'，页面将刷新');location.reload()}
 function iconPick(){
  const i=document.createElement('input');i.type='file';i.accept='image/*';
  i.onchange=()=>{const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d'),m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,180,180);const u=c.toDataURL('image/png');try{localStorage.setItem('icon',u)}catch(e){}applyIcon(u);save('appicon',{u});alert('图标已保存。请用 Safari 直接打开网址（不要从主屏幕图标进入），登录后再“添加到主屏幕”，新图标才会生效。')};im.src=URL.createObjectURL(f)};
@@ -622,17 +630,29 @@ function drawLines(){
   h+=`<line x1="${mr.left-wr.left+p.x}" y1="${mr.top-wr.top+p.y}" x2="${s2[0]/1000*wr.width}" y2="${s2[1]/1100*wr.height}" stroke="#a8803f" stroke-width="1" opacity=".6"/>`});
  sv.innerHTML=h;
 }
+const bfSkip=new Set();let bfBusy=false;
+async function backfill(){
+ if(bfBusy||!window.AMap||!AMap.Geocoder)return;bfBusy=true;
+ for(const v of rec('photo')){
+  if(v.lng==null||v.ad||bfSkip.has(v.id))continue;bfSkip.add(v.id);
+  const r=await new Promise(res=>new AMap.Geocoder({radius:300,extensions:'all'}).getAddress([v.lng,v.lat],(st,x)=>res(st==='complete'&&x.regeocode?x.regeocode:null)));
+  if(!r||!r.addressComponent)continue;
+  const a=r.addressComponent,poi=(r.aois&&r.aois[0]&&r.aois[0].name)||(r.pois&&r.pois[0]&&r.pois[0].name)||'';
+  await save(v.id,{...items[v.id],ad:a.adcode||'',dist:a.district||'',poi,prov:typeof a.province==='string'?a.province:'境外'});
+ }
+ bfBusy=false;
+}
 let fullMode=false,fCl=null;
 function ensureF(){
  if(fEl)return;
  fEl=document.createElement('div');fEl.style.cssText='width:100%;height:100%;border:2px solid var(--ink);box-sizing:border-box;border-radius:4px';
- fmap=new AMap.Map(fEl,{zoom:4,center:[104.5,36],resizeEnable:true,features:['bg','road','point']});
+ fmap=new AMap.Map(fEl,mapOpts({zoom:4,center:[104.5,36]}));
  ['mapmove','zoomchange','moveend','complete'].forEach(ev=>fmap.on(ev,drawLines));
 }
 function mountF(){
  const e=$('#fslot');if(!e||!window.AMap||!plugReady||!AMap.DistrictLayer)return;
  ensureF();
- if(!fullMode){e.innerHTML='';e.appendChild(fEl)}
+ if(!fullMode){e.innerHTML='';e.appendChild(fEl);fRes()}
  paintF();
 }
 function fpin(v,n){
@@ -664,13 +684,15 @@ function paintF(){
  fPh.forEach(v=>{const m=new AMap.Marker({position:[v.lng,v.lat],anchor:'center',zIndex:50,content:'<div style="width:9px;height:9px;border-radius:50%;background:#c0392b;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5)"></div>'});fmap.add(m);fMks.push(m)});
  setTimeout(drawLines,50);
 }
+let fT=[];
+function fRes(){fT.forEach(clearTimeout);fT=[0,150,400,900,1800].map(t=>setTimeout(()=>{if(fmap&&fmap.resize)try{fmap.resize()}catch(e){}window.dispatchEvent(new Event('resize'));if(fmap)drawLines()},t))}
 function openFull(){
  if(!fmap||!fEl){toast('地图还没加载好，请稍等');return}
  let o=$('#fsfull');
  if(!o){o=document.createElement('div');o.id='fsfull';o.innerHTML='<div id="fsslot" style="position:absolute;inset:0"></div><div id="fsbar"><button class="btn" onclick="closeFull()">✕ 关闭</button><span id="fstt"></span></div><button class="locb" style="position:absolute;top:auto;right:16px;bottom:calc(30px + env(safe-area-inset-bottom,0px));width:52px;height:52px" onclick="fMe()">◎</button>';document.body.appendChild(o)}
  fullMode=true;o.classList.add('on');$('#fsslot').appendChild(fEl);fEl.style.border='0';fEl.style.borderRadius='0';
  $('#fstt').textContent='已点亮 '+fVis.vp.size+' 个省 · '+fVis.vc.size+' 个市';
- setTimeout(()=>{window.dispatchEvent(new Event('resize'));paintF()},60);
+ fRes();setTimeout(paintF,60);
 }
 function closeFull(){fullMode=false;const o=$('#fsfull');if(o)o.classList.remove('on');if(fEl){fEl.style.border='2px solid var(--ink)';fEl.style.borderRadius='4px'}render()}
 function fMe(){if(me&&fmap)fmap.setZoomAndCenter(15,me);else locateNow(true)}
