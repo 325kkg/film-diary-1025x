@@ -78,6 +78,7 @@ textarea{min-height:80px}
 #fsbar{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;gap:10px;align-items:center;z-index:5;pointer-events:none}#fsbar>*{pointer-events:auto}
 #fstt{background:rgba(0,0,0,.6);color:#fff;padding:5px 12px;border-radius:14px;font-size:13px}
 @keyframes unf{from{transform:scaleY(.15);opacity:0}to{transform:scaleY(1);opacity:1}}
+html,body{max-width:100%;overflow-x:hidden}.card,.mut,.pol p,.tlt,.tld{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -116,7 +117,7 @@ function toast(m){const e=document.createElement('div');e.className='toast';e.te
 async function save(id,d){items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
 async function del(id){delete items[id];render();if(col)try{await col.doc(id).delete()}catch(e){toast('删除失败')}}
 
-const T0=performance.now(),tm={};let RASTER=true;try{RASTER=localStorage.getItem('raster')!=='0'}catch(e){}
+const T0=performance.now(),tm={};let RASTER=true;try{RASTER=localStorage.getItem('raster')==='1'}catch(e){}
 const RTILE='https://webrd0{1,2,3,4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=[x]&y=[y]&z=[z]';
 function mapOpts(o){const r={...o,resizeEnable:true,features:['bg','road','point']};if(RASTER)r.layers=[new AMap.TileLayer({getTileUrl:RTILE,zIndex:2})];return r}
 function tmText(){return '加载耗时（秒）：'+[['data','数据'],['engine','地图引擎'],['tiles','地图画面'],['plug','标记组件']].map(([k,n])=>n+(tm[k]?(tm[k]/1000).toFixed(1):'…')).join(' · ')+(RASTER?' · 极速底图':' · 矢量底图')}
@@ -204,7 +205,7 @@ function card(v){
  if(v.type==='mood')h=`<div class="row"><h3><span style="font-size:24px">${MO[v.score]||''}</span> ${esc(v.date)}</h3>${by}</div><div class="mut">${v.tag?`<span class="tag">${esc(v.tag)}</span>`:''}${esc(v.inten||'')}</div>${body('note')}`;
  if(v.type==='fight'){const sc=(l,k)=>v[k]?`<div style="margin-top:4px"><span class="tag">${l}</span>${esc(v[k])}</div>`:'';
  h=`<div class="row"><h3>🩹 ${esc(v.date)} ${v.level?`<span class="tag">${esc(v.level)}</span>`:''}</h3>${by}</div>${sc('起因','cause')}${sc('我的感受','feelA')}${sc('TA的感受','feelB')}${sc('真正想要','need')}${sc('和好','fix')}${sc('下次','learn')}${sc('约定','promise')}${v.dur?`<div class="stamp" style="margin-top:6px">和好用时：${esc(v.dur)}</div>`:''}`}
- if(v.type==='food')h=`${v.img?`<img src="${v.img}" alt="" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:6px;float:right;margin-left:8px">`:''}<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(v.addr||'')} ${by}</div>${body('note')}${navLinks(v)}`;
+ if(v.type==='food')h=`${v.img?`<img src="${v.img}" alt="" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:6px;float:right;margin-left:8px">`:''}<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(shortAddr(v.addr))} ${by}</div>${body('note')}${navLinks(v)}`;
  return `<div class="card" onclick="openForm('${v.type}','${v.id}')">${h}</div>`;
 }
 
@@ -246,7 +247,7 @@ function home(){
  <div class="card static"><h3>🎲 回忆盲盒</h3><div id="box" class="mut">随机抽一段你们的回忆</div><p><button class="btn o" onclick="blind()">抽一张</button></p></div>
  ${moodChart()}
  <div class="card static"><h3>📊 我们的数据</h3>日记 ${rec('diary').length} 篇 · 照片 ${rec('photo').length} 张 · 情话 ${rec('letter').length} 封 · 足迹 ${ps.length} 处 · 复盘 ${rec('fight').length} 次</div>
- <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改密码</button> <button class="btn o" onclick="iconPick()">设置图标</button> <button class="btn o" onclick="toggleRaster()">切换地图底图</button></p>`;
+ <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改密码</button> <button class="btn o" onclick="iconPick()">设置图标</button></p>`;
 }
 function moodChart(){
  const a=dsort(rec('mood')).reverse().slice(-14);
@@ -358,7 +359,7 @@ function loadAMap(){
   const s0=startCenter();amap=new AMap.Map(mEl,mapOpts({zoom:s0.z,center:s0.c}));amap.on('complete',()=>{tm.tiles=performance.now()-T0;tmShow()});
   amap.on('moveend',()=>{try{const c=amap.getCenter();localStorage.setItem('mapc',JSON.stringify({c:[c.lng,c.lat],z:amap.getZoom()}))}catch(e){}});
   render();
-  AMap.plugin(['AMap.MarkerCluster','AMap.DistrictLayer'],()=>{plugReady=true;tm.plug=performance.now()-T0;tmShow();drawMarkers()});
+  AMap.plugin(['AMap.MarkerCluster'],()=>{plugReady=true;tm.plug=performance.now()-T0;tmShow();drawMarkers()});
   AMap.plugin(['AMap.AutoComplete','AMap.PlaceSearch','AMap.Geocoder','AMap.CitySearch'],()=>{if(!myCity)locFail(null,false);backfill()});
  };
  sc.onerror=()=>{amapState=3;render()};
@@ -392,6 +393,7 @@ function drawMarkers(){
 function tipInput(){
  clearTimeout(tmr);
  const q=($('#sq')||{}).value;
+ if(q&&/maps\.apple\.com/.test(q)){const e=$('#tips');if(e)e.innerHTML='<div class="card" style="padding:8px 12px;margin:0 0 6px" onclick="pickLink()"><b>🔗 识别到 Apple 地图链接</b><div class="mut">点这里，用链接里的地址定位这家店</div></div>';return}
  if(!q||!q.trim()||!window.AMap||!AMap.AutoComplete){const e=$('#tips');if(e)e.innerHTML='';return}
  tmr=setTimeout(()=>{new AMap.AutoComplete({city:myCity||'全国'}).search(q.trim(),(st,r)=>{
   tips=(st==='complete'&&r.tips?r.tips:[]).filter(t=>t.location&&t.location.lng!=null);
@@ -407,7 +409,7 @@ function pickTip(i){
 }
 function navLinks(v){
  const nm=encodeURIComponent(v.name||''),st='text-decoration:none;display:inline-block';
- const ap=v.lng!=null?`maps://?daddr=${v.lat},${v.lng}&amp;dirflg=d`:`maps://?daddr=${encodeURIComponent((v.addr||'')+' '+(v.name||''))}&amp;dirflg=d`;
+ const ap=v.lng!=null?`maps://?daddr=${v.lat},${v.lng}&amp;dirflg=d`:`maps://?daddr=${encodeURIComponent(shortAddr(v.addr)+' '+(v.name||''))}&amp;dirflg=d`;
  const am=v.lng!=null?` <a class="btn o" style="${st}" href="https://uri.amap.com/navigation?to=${v.lng},${v.lat},${nm}&amp;mode=car&amp;coordinate=gaode&amp;callnative=1" onclick="event.stopPropagation()">高德导航</a>`:'';
  return `<div style="margin-top:6px;clear:both"><a class="btn o" style="${st}" href="${ap}" onclick="event.stopPropagation()">🧭 Apple 地图导航</a>${am}</div>`;
 }
@@ -477,6 +479,13 @@ function tlView(){
  return h+'</div>';
 }
 function applyIcon(u){let l=document.querySelector('link[rel="apple-touch-icon"]');if(!l){l=document.createElement('link');l.rel='apple-touch-icon';document.head.appendChild(l)}l.href=u}
+function shortAddr(a){a=a||'';if(!/^https?:/i.test(a))return a;try{const u=new URL(a);return u.searchParams.get('address')||u.searchParams.get('name')||u.searchParams.get('q')||'地图链接'}catch(e){return '地图链接'}}
+function pickLink(){
+ let u;try{u=new URL($('#sq').value.trim())}catch(e){toast('链接格式不对');return}
+ const ad=u.searchParams.get('address')||u.searchParams.get('q')||'',nm=u.searchParams.get('name')||'';
+ if(!ad){toast('链接里没有地址信息，请直接搜索店名');return}
+ amReady(()=>new AMap.Geocoder().getLocation(ad,(st,r)=>{if(st==='complete'&&r.geocodes&&r.geocodes[0]){const g=r.geocodes[0];openForm('food',null,{lng:g.location.lng,lat:g.location.lat,pre:{name:nm,addr:g.formattedAddress||ad,kind:'想吃'}})}else toast('这个地址没能定位，请手动搜索店名')}));
+}
 function toggleRaster(){RASTER=!RASTER;try{localStorage.setItem('raster',RASTER?'1':'0')}catch(e){}alert('已切换为：'+(RASTER?'极速底图':'矢量底图')+'，页面将刷新');location.reload()}
 function iconPick(){
  const i=document.createElement('input');i.type='file';i.accept='image/*';
@@ -650,7 +659,7 @@ function ensureF(){
  ['mapmove','zoomchange','moveend','complete'].forEach(ev=>fmap.on(ev,drawLines));
 }
 function mountF(){
- const e=$('#fslot');if(!e||!window.AMap||!plugReady||!AMap.DistrictLayer)return;
+ const e=$('#fslot');if(!e||!window.AMap||!plugReady||false)return;
  ensureF();
  if(!fullMode){e.innerHTML='';e.appendChild(fEl);fRes()}
  paintF();
@@ -661,15 +670,6 @@ function fpin(v,n){
 }
 function paintF(){
  if(!fmap)return;
- const V=fVis,sig=[...V.vp,'|',...V.vc,'|',...V.vd].join(',');
- if(sig!==fSig){
-  fSig=sig;fLayers.forEach(l=>fmap.remove(l));fLayers=[];
-  const fill=p=>V.vd.has(String(p.adcode_cou))?'rgba(212,136,58,.7)':V.vc.has(String(p.adcode_cit))?'rgba(224,166,90,.55)':'rgba(0,0,0,0)';
-  const st={fill,'province-stroke':'#8a6d3b','city-stroke':'rgba(138,109,59,.55)','county-stroke':'rgba(138,109,59,.35)','nation-stroke':'#6b5530','coastline-stroke':'#8a6d3b'};
-  const C=new AMap.DistrictLayer.Country({SOC:'CHN',depth:2,zIndex:10,styles:{...st,fill:p=>V.vp.has(String(p.adcode_pro))?'rgba(233,194,124,.45)':'rgba(0,0,0,0)'}});
-  fmap.add(C);fLayers.push(C);
-  [...V.vp].forEach(pa=>{const P=new AMap.DistrictLayer.Province({adcode:[pa],depth:2,zIndex:11,styles:st});fmap.add(P);fLayers.push(P)});
- }
  fMks.forEach(m=>fmap.remove(m));fMks=[];
  if(fullMode){
   const pts=dsort(rec('photo')).filter(v=>v.lng!=null).map(v=>({lnglat:[v.lng,v.lat],id:v.id,v}));
@@ -710,7 +710,7 @@ function photoView(){
  const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
  return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片</div>
  <div id="fwrap" style="position:relative;width:100%;padding-top:110%;background:var(--card);border:1px solid var(--line);border-radius:4px"><div id="fslot" style="position:absolute;left:20%;top:22.7%;width:60%;height:54.5%"><div class="mapph" style="height:100%;aspect-ratio:auto">🗺️ 地图加载中…</div></div><button class="locb" style="top:8px;right:8px;z-index:6;width:auto;border-radius:18px;padding:0 14px;font-size:14px" onclick="openFull()">⛶ 全屏地图</button><svg id="flines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></svg>${tiles}</div>
- <p class="mut" style="text-align:center">点右上角“全屏地图”可以大图查看、放大到街道，照片会以缩略图标在地图上，靠得近的会合并成数字；去过的省、市、区县会涂上颜色</p>${wall}`;
+ <p class="mut" style="text-align:center">点右上角“全屏地图”可以大图查看、放大到街道，照片会以缩略图标在地图上，靠得近的会合并成数字</p>${wall}`;
 }
 const PAPER={'米色信纸':'#f6ecd3','格子信纸':'#f4f1e6','牛皮纸':'#d8bf94','淡粉信纸':'#f8e1e4'};
 function togCk(id,i){const v=items[id],c=new Set((v.ck||'').split(',').filter(Boolean)),k=String(i);c.has(k)?c.delete(k):c.add(k);save(id,{...v,ck:[...c].join(',')})}
