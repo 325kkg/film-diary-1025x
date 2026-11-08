@@ -79,6 +79,7 @@ textarea{min-height:80px}
 #fstt{background:rgba(0,0,0,.6);color:#fff;padding:5px 12px;border-radius:14px;font-size:13px}
 @keyframes unf{from{transform:scaleY(.15);opacity:0}to{transform:scaleY(1);opacity:1}}
 html,body{max-width:100%;overflow-x:hidden}.card,.mut,.pol p,.tlt,.tld{overflow-wrap:anywhere}
+.amap-marker,.amap-marker-content{pointer-events:none!important}
 </style>
 </head>
 <body>
@@ -356,7 +357,7 @@ function loadAMap(){
  const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key;
  sc.onload=()=>{
   amapState=2;tm.engine=performance.now()-T0;tmShow();mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';{const st=document.createElement('div');st.style.cssText='position:fixed;left:-9999px;top:0;width:'+Math.min(innerWidth-24,600)+'px';st.appendChild(mEl);document.body.appendChild(st)}
-  const s0=startCenter();amap=new AMap.Map(mEl,mapOpts({zoom:s0.z,center:s0.c}));amap.on('complete',()=>{tm.tiles=performance.now()-T0;tmShow()});['mapmove','zoomchange'].forEach(ev=>amap.on(ev,()=>{mvT=Date.now();fit=1}));
+  const s0=startCenter();amap=new AMap.Map(mEl,mapOpts({zoom:s0.z,center:s0.c}));amap.on('complete',()=>{tm.tiles=performance.now()-T0;tmShow()});['mapmove','zoomchange'].forEach(ev=>amap.on(ev,()=>{mvT=Date.now();fit=1}));amap.on('click',e=>markerTap(e,amap,'food'));
   amap.on('moveend',()=>{try{const c=amap.getCenter();localStorage.setItem('mapc',JSON.stringify({c:[c.lng,c.lat],z:amap.getZoom()}))}catch(e){}});
   render();
   AMap.plugin(['AMap.MarkerCluster'],()=>{plugReady=true;tm.plug=performance.now()-T0;tmShow();drawMarkers()});
@@ -368,11 +369,11 @@ function loadAMap(){
 }
 function mountMap(){mountF();const e=$('#mapslot');if(e&&mEl){e.style.position='relative';if(mEl.parentNode!==e){e.appendChild(mEl);if(!mMounted){mMounted=true;fRes()}}if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
 let cluster=null,tips=[],tmr=null;
-function pin(v,n){
+function pin(v,n,ids){
  const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
  const lab=one?(eat?'★'+(v.star?v.star.length:''):'想吃'):n;
  const im=v.img?`<img src="${v.img}" style="width:100%;height:100%;object-fit:cover;display:block">`:`<div style="font-size:26px;line-height:48px;text-align:center;background:#efe4cf;height:100%">${eat?'😋':'🤤'}</div>`;
- return `<div style="position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid ${col}${sel===v.id&&one?';outline:3px solid #e8b923':''}"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div><div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 ${one?12:16}px sans-serif;text-shadow:0 1px 3px #000">${lab}</div><div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div>${one?`<div style="position:absolute;top:68px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(0,0,0,.65);color:#fff;padding:0 6px;border-radius:8px;font:11px sans-serif">${esc(v.name)}</div>`:''}</div>`;
+ return `<div data-ids="${ids||''}" style="pointer-events:none;position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid ${col}${sel===v.id&&one?';outline:3px solid #e8b923':''}"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div><div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 ${one?12:16}px sans-serif;text-shadow:0 1px 3px #000">${lab}</div><div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div>${one?`<div style="position:absolute;top:68px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(0,0,0,.65);color:#fff;padding:0 6px;border-radius:8px;font:11px sans-serif">${esc(v.name)}</div>`:''}</div>`;
 }
 function drawMarkers(){
  if(!amap||!plugReady)return;
@@ -382,9 +383,9 @@ function drawMarkers(){
  if(cluster)cluster.setData(pts);
  else{
   cluster=new AMap.MarkerCluster(amap,pts,{gridSize:70,maxZoom:17,
-   renderClusterMarker:c=>{c.marker.setContent(pin(c.clusterData[0].v,c.count));c.marker.setOffset(new AMap.Pixel(-30,-70))},
-   renderMarker:c=>{c.marker.setContent(pin(c.data[0].v,0));c.marker.setOffset(new AMap.Pixel(-30,-70))}});
-  cluster.on('click',e=>{if(Date.now()-mvT<400)return;const d=e.clusterData||[];if(d.length>1)zoomToCluster(amap,d);else if(d[0])selPin(d[0].id)});
+   renderClusterMarker:c=>{c.marker.setContent(pin(c.clusterData[0].v,c.count,c.clusterData.map(p=>p.id).join(',')));c.marker.setOffset(new AMap.Pixel(-30,-70))},
+   renderMarker:c=>{c.marker.setContent(pin(c.data[0].v,0,c.data[0].id));c.marker.setOffset(new AMap.Pixel(-30,-70))}});
+  cluster.on('click',e=>{if(Date.now()-mvT<400||Date.now()-tapT<350)return;tapT=Date.now();const d=e.clusterData||[];if(d.length>1)zoomToCluster(amap,d);else if(d[0])selPin(d[0].id)});
  }
  if(!fit&&pts.length){
   fit=1;
@@ -653,7 +654,17 @@ async function backfill(){
  }
  bfBusy=false;
 }
-let mvT=0,mMounted=false,fMounted=false,mSig='',fSigM='';
+let mvT=0,tapT=0,mMounted=false,fMounted=false,mSig='',fSigM='';
+function markerTap(e,m,mode){
+ if(Date.now()-mvT<400||!e||!e.pixel)return;
+ const el=m===amap?mEl:fEl;if(!el)return;
+ const cr=el.getBoundingClientRect(),x=cr.left+e.pixel.x,y=cr.top+e.pixel.y;let hit=null;
+ el.querySelectorAll('[data-ids]').forEach(n=>{const r=n.getBoundingClientRect();if(x>=r.left-6&&x<=r.right+6&&y>=r.top-6&&y<=r.bottom+14)hit=n});
+ if(!hit||Date.now()-tapT<350)return;tapT=Date.now();
+ const ids=hit.dataset.ids.split(',').filter(Boolean);
+ if(ids.length>1){const d=ids.map(id=>items[id]).filter(v=>v&&v.lng!=null).map(v=>({lnglat:[v.lng,v.lat]}));if(d.length)zoomToCluster(m,d)}
+ else if(ids[0])mode==='food'?selPin(ids[0]):openForm('photo',ids[0]);
+}
 function zoomToCluster(m,d){
  const xs=d.map(p=>p.lnglat[0]),ys=d.map(p=>p.lnglat[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
  if(x1-x0<2e-4&&y1-y0<2e-4)m.setZoomAndCenter(Math.min(m.getZoom()+3,18),[(x0+x1)/2,(y0+y1)/2]);
@@ -665,7 +676,7 @@ function ensureF(slot){
  fEl=document.createElement('div');fEl.style.cssText='width:100%;height:100%;border:2px solid var(--ink);box-sizing:border-box;border-radius:4px';
  if(slot){slot.innerHTML='';slot.appendChild(fEl)}
  fmap=new AMap.Map(fEl,mapOpts({zoom:4,center:[104.5,36]}));
- ['mapmove','zoomchange'].forEach(ev=>fmap.on(ev,()=>{mvT=Date.now()}));
+ ['mapmove','zoomchange'].forEach(ev=>fmap.on(ev,()=>{mvT=Date.now()}));fmap.on('click',e=>{if(fullMode)markerTap(e,fmap,'photo')});
  ['mapmove','zoomchange','moveend','complete'].forEach(ev=>fmap.on(ev,drawLines));
 }
 function mountF(){
@@ -674,9 +685,9 @@ function mountF(){
  if(!fullMode){e.innerHTML='';e.appendChild(fEl);if(!fMounted){fMounted=true;fRes()}}
  paintF();
 }
-function fpin(v,n){
+function fpin(v,n,ids){
  const im=v.img?`<img src="${v.img}" style="width:100%;height:100%;object-fit:cover;display:block">`:'<div style="font-size:26px;line-height:48px;text-align:center;background:#efe4cf;height:100%">📷</div>';
- return `<div style="position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid #c0392b"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div>${n>1?`<div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 16px sans-serif;text-shadow:0 1px 3px #000">${n}</div>`:''}<div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div></div>`;
+ return `<div data-ids="${ids||''}" style="pointer-events:none;position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid #c0392b"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div>${n>1?`<div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 16px sans-serif;text-shadow:0 1px 3px #000">${n}</div>`:''}<div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div></div>`;
 }
 function paintF(){
  if(!fmap)return;
@@ -687,9 +698,9 @@ function paintF(){
   if(fCl&&sg===fSigM)return;fSigM=sg;
   if(fCl)fCl.setData(pts);
   else{fCl=new AMap.MarkerCluster(fmap,pts,{gridSize:70,maxZoom:17,
-   renderClusterMarker:c=>{c.marker.setContent(fpin(c.clusterData[0].v,c.count));c.marker.setOffset(new AMap.Pixel(-30,-70))},
-   renderMarker:c=>{c.marker.setContent(fpin(c.data[0].v,0));c.marker.setOffset(new AMap.Pixel(-30,-70))}});
-   fCl.on('click',e=>{if(Date.now()-mvT<400)return;const d=e.clusterData||[];if(d.length>1)zoomToCluster(fmap,d);else if(d[0])openForm('photo',d[0].id)})}
+   renderClusterMarker:c=>{c.marker.setContent(fpin(c.clusterData[0].v,c.count,c.clusterData.map(p=>p.id).join(',')));c.marker.setOffset(new AMap.Pixel(-30,-70))},
+   renderMarker:c=>{c.marker.setContent(fpin(c.data[0].v,0,c.data[0].id));c.marker.setOffset(new AMap.Pixel(-30,-70))}});
+   fCl.on('click',e=>{if(Date.now()-mvT<400||Date.now()-tapT<350)return;tapT=Date.now();const d=e.clusterData||[];if(d.length>1)zoomToCluster(fmap,d);else if(d[0])openForm('photo',d[0].id)})}
   return;
  }
  if(fCl){fCl.setData([]);fSigM=''}
