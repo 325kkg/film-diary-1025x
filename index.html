@@ -80,6 +80,7 @@ textarea{min-height:80px}
 @keyframes unf{from{transform:scaleY(.15);opacity:0}to{transform:scaleY(1);opacity:1}}
 html,body{max-width:100%;overflow-x:hidden}.card,.mut,.pol p,.tlt,.tld{overflow-wrap:anywhere}
 .amap-marker,.amap-marker-content{pointer-events:none!important}
+#mapslot,#mapslot *,#fslot,#fslot *,#fsslot,#fsslot *{touch-action:none}
 </style>
 </head>
 <body>
@@ -118,6 +119,7 @@ function toast(m){const e=document.createElement('div');e.className='toast';e.te
 async function save(id,d){items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
 async function del(id){delete items[id];render();if(col)try{await col.doc(id).delete()}catch(e){toast('删除失败')}}
 
+let touching=false,pend=false,touchTm=null;
 const T0=performance.now(),tm={};let RASTER=true;try{RASTER=localStorage.getItem('raster')==='1'}catch(e){}
 const RTILE='https://webrd0{1,2,3,4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=[x]&y=[y]&z=[z]';
 function mapOpts(o){const r={...o,resizeEnable:true};if(RASTER)r.layers=[new AMap.TileLayer({getTileUrl:RTILE,zIndex:2})];return r}
@@ -272,6 +274,7 @@ function setup(edit){
 
 function render(){
  if(!ready)return;
+ if(touching){pend=true;return}
  if(!unlockedNow()){$('#nav').innerHTML='';$('#fab').style.display='none';$('#sub').textContent=warn||'LOCKED';$('#ttl').textContent='我们的胶片日记';$('#app').innerHTML=`<div class="card static" style="text-align:center"><h3>🔒 输入密码</h3><input id="pwi" type="password" inputmode="numeric" onkeydown="if(event.key==='Enter')unlock()"><p><button class="btn" onclick="unlock()">打开我们的日记</button></p></div>`;return}
  $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${i} ${n}</button>`).join('');
  $('#ttl').textContent=meta?`${meta.a} & ${meta.b}`:'我们的胶片日记';
@@ -382,10 +385,10 @@ function drawMarkers(){
  if(cluster&&sg===mSig)return;mSig=sg;
  if(cluster)cluster.setData(pts);
  else{
-  cluster=new AMap.MarkerCluster(amap,pts,{gridSize:70,maxZoom:17,
+  cluster=new AMap.MarkerCluster(amap,pts,{gridSize:90,maxZoom:22,
    renderClusterMarker:c=>{c.marker.setContent(pin(c.clusterData[0].v,c.count,c.clusterData.map(p=>p.id).join(',')));c.marker.setOffset(new AMap.Pixel(-30,-70))},
    renderMarker:c=>{c.marker.setContent(pin(c.data[0].v,0,c.data[0].id));c.marker.setOffset(new AMap.Pixel(-30,-70))}});
-  cluster.on('click',e=>{if(Date.now()-mvT<400||Date.now()-tapT<350)return;tapT=Date.now();const d=e.clusterData||[];if(d.length>1)zoomToCluster(amap,d);else if(d[0])selPin(d[0].id)});
+  cluster.on('click',e=>{if(Date.now()-mvT<400||Date.now()-tapT<350)return;tapT=Date.now();const d=e.clusterData||[];if(d.length>1)showCluster(d.map(p=>p.id),amap,'food');else if(d[0])selPin(d[0].id)});
  }
  if(!fit&&pts.length){
   fit=1;
@@ -658,12 +661,25 @@ let mvT=0,tapT=0,mMounted=false,fMounted=false,mSig='',fSigM='';
 function markerTap(e,m,mode){
  if(Date.now()-mvT<400||!e||!e.pixel)return;
  const el=m===amap?mEl:fEl;if(!el)return;
- const cr=el.getBoundingClientRect(),x=cr.left+e.pixel.x,y=cr.top+e.pixel.y;let hit=null;
- el.querySelectorAll('[data-ids]').forEach(n=>{const r=n.getBoundingClientRect();if(x>=r.left-6&&x<=r.right+6&&y>=r.top-6&&y<=r.bottom+14)hit=n});
- if(!hit||Date.now()-tapT<350)return;tapT=Date.now();
- const ids=hit.dataset.ids.split(',').filter(Boolean);
- if(ids.length>1){const d=ids.map(id=>items[id]).filter(v=>v&&v.lng!=null).map(v=>({lnglat:[v.lng,v.lat]}));if(d.length)zoomToCluster(m,d)}
+ const cr=el.getBoundingClientRect(),x=cr.left+e.pixel.x,y=cr.top+e.pixel.y;
+ const hits=[...el.querySelectorAll('[data-ids]')].filter(n=>{const r=n.getBoundingClientRect();return x>=r.left-6&&x<=r.right+6&&y>=r.top-6&&y<=r.bottom+14});
+ if(!hits.length||Date.now()-tapT<350)return;tapT=Date.now();
+ const ids=[...new Set(hits.flatMap(n=>n.dataset.ids.split(',')).filter(Boolean))];
+ if(ids.length>1)showCluster(ids,m,mode);
  else if(ids[0])mode==='food'?selPin(ids[0]):openForm('photo',ids[0]);
+}
+let lastIds=[],lastMode='';
+function showCluster(ids,m,mode){
+ lastIds=ids;lastMode=mode;
+ const L=ids.map(id=>items[id]?{...items[id],id}:null).filter(Boolean);
+ const cell=v=>`<div class="pol" style="--r:0deg" onclick="$('#dlg').close();${mode==='food'?`selPin('${v.id}')`:`openForm('photo','${v.id}')`}">${v.img?`<img src="${v.img}" alt="">`:`<div style="height:90px;display:flex;align-items:center;justify-content:center;font-size:30px">${mode==='food'?'🍜':'📷'}</div>`}<p>${esc(mode==='food'?(v.name||''):(v.poi||v.place||''))}<br><span class="mut">${esc(v.date||'')}</span></p></div>`;
+ $('#dlg').innerHTML=`<h3>这里共有 ${L.length} ${mode==='food'?'家店':'张照片'}</h3><div class="grid">${L.map(cell).join('')}</div><p style="text-align:right"><button class="btn o" onclick="zoomLast()">放大到这里</button> <button class="btn" onclick="$('#dlg').close()">关闭</button></p>`;
+ $('#dlg').showModal();
+}
+function zoomLast(){
+ $('#dlg').close();const m=lastMode==='food'?amap:fmap;if(!m)return;
+ const d=lastIds.map(id=>items[id]).filter(v=>v&&v.lng!=null).map(v=>({lnglat:[v.lng,v.lat]}));
+ if(d.length)zoomToCluster(m,d);
 }
 function zoomToCluster(m,d){
  const xs=d.map(p=>p.lnglat[0]),ys=d.map(p=>p.lnglat[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
@@ -697,10 +713,10 @@ function paintF(){
   const sg=JSON.stringify(pts.map(p=>[p.id,p.lnglat,(p.v.img||'').length]));
   if(fCl&&sg===fSigM)return;fSigM=sg;
   if(fCl)fCl.setData(pts);
-  else{fCl=new AMap.MarkerCluster(fmap,pts,{gridSize:70,maxZoom:17,
+  else{fCl=new AMap.MarkerCluster(fmap,pts,{gridSize:90,maxZoom:22,
    renderClusterMarker:c=>{c.marker.setContent(fpin(c.clusterData[0].v,c.count,c.clusterData.map(p=>p.id).join(',')));c.marker.setOffset(new AMap.Pixel(-30,-70))},
    renderMarker:c=>{c.marker.setContent(fpin(c.data[0].v,0,c.data[0].id));c.marker.setOffset(new AMap.Pixel(-30,-70))}});
-   fCl.on('click',e=>{if(Date.now()-mvT<400||Date.now()-tapT<350)return;tapT=Date.now();const d=e.clusterData||[];if(d.length>1)zoomToCluster(fmap,d);else if(d[0])openForm('photo',d[0].id)})}
+   fCl.on('click',e=>{if(Date.now()-mvT<400||Date.now()-tapT<350)return;tapT=Date.now();const d=e.clusterData||[];if(d.length>1)showCluster(d.map(p=>p.id),fmap,'photo');else if(d[0])openForm('photo',d[0].id)})}
   return;
  }
  if(fCl){fCl.setData([]);fSigM=''}
@@ -826,5 +842,11 @@ function exportData(){
 }
 setTimeout(preloadMap,0);
 try{if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));if(window.caches)caches.keys().then(k=>k.forEach(n=>caches.delete(n)));indexedDB.deleteDatabase('film');Object.keys(localStorage).filter(k=>/^(cnp2|cnp3|cnmap|cnc)/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
+(()=>{
+ const inMap=e=>e.target&&e.target.closest&&e.target.closest('#fslot,#fsslot,#mapslot');
+ ['touchstart','touchmove'].forEach(ev=>document.addEventListener(ev,e=>{if(inMap(e)){touching=true;clearTimeout(touchTm)}},{passive:true,capture:true}));
+ ['touchend','touchcancel'].forEach(ev=>document.addEventListener(ev,e=>{if(e.touches&&e.touches.length)return;touching=false;if(pend)setTimeout(()=>{if(pend&&!touching){pend=false;render()}},300)},{passive:true,capture:true}));
+ ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>{if(inMap(e))e.preventDefault()},{passive:false}));
+})();
 </script>
 </body></html>
