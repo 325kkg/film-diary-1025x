@@ -119,7 +119,7 @@ async function del(id){delete items[id];render();if(col)try{await col.doc(id).de
 
 const T0=performance.now(),tm={};let RASTER=true;try{RASTER=localStorage.getItem('raster')==='1'}catch(e){}
 const RTILE='https://webrd0{1,2,3,4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=[x]&y=[y]&z=[z]';
-function mapOpts(o){const r={...o,resizeEnable:true,features:['bg','road','point']};if(RASTER)r.layers=[new AMap.TileLayer({getTileUrl:RTILE,zIndex:2})];return r}
+function mapOpts(o){const r={...o,resizeEnable:true};if(RASTER)r.layers=[new AMap.TileLayer({getTileUrl:RTILE,zIndex:2})];return r}
 function tmText(){return '加载耗时（秒）：'+[['data','数据'],['engine','地图引擎'],['tiles','地图画面'],['plug','标记组件']].map(([k,n])=>n+(tm[k]?(tm[k]/1000).toFixed(1):'…')).join(' · ')+(RASTER?' · 极速底图':' · 矢量底图')}
 function tmShow(){const e=document.getElementById('tmline');if(e)e.textContent=tmText()}
 const CFG={url:"https://ojrtyldgmmdvzenqopov.supabase.co",key:"sb_publishable_Gm_LvG63Ku2suaNmV_5AWg_eDRwVbMT"};
@@ -355,7 +355,7 @@ function loadAMap(){
  window._AMapSecurityConfig={securityJsCode:AMAP.sec};
  const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key;
  sc.onload=()=>{
-  amapState=2;tm.engine=performance.now()-T0;tmShow();mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';
+  amapState=2;tm.engine=performance.now()-T0;tmShow();mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';{const st=document.createElement('div');st.style.cssText='position:fixed;left:-9999px;top:0;width:'+Math.min(innerWidth-24,600)+'px';st.appendChild(mEl);document.body.appendChild(st)}
   const s0=startCenter();amap=new AMap.Map(mEl,mapOpts({zoom:s0.z,center:s0.c}));amap.on('complete',()=>{tm.tiles=performance.now()-T0;tmShow()});
   amap.on('moveend',()=>{try{const c=amap.getCenter();localStorage.setItem('mapc',JSON.stringify({c:[c.lng,c.lat],z:amap.getZoom()}))}catch(e){}});
   render();
@@ -366,7 +366,7 @@ function loadAMap(){
  document.head.appendChild(sc);
  setTimeout(()=>{if(amapState===1){amapState=3;render()}},20000);
 }
-function mountMap(){mountF();const e=$('#mapslot');if(e&&mEl){e.style.position='relative';e.appendChild(mEl);if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
+function mountMap(){mountF();const e=$('#mapslot');if(e&&mEl){e.style.position='relative';if(mEl.parentNode!==e){e.appendChild(mEl);fRes()}if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
 let cluster=null,tips=[],tmr=null;
 function pin(v,n){
  const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
@@ -652,15 +652,16 @@ async function backfill(){
  bfBusy=false;
 }
 let fullMode=false,fCl=null;
-function ensureF(){
+function ensureF(slot){
  if(fEl)return;
  fEl=document.createElement('div');fEl.style.cssText='width:100%;height:100%;border:2px solid var(--ink);box-sizing:border-box;border-radius:4px';
+ if(slot){slot.innerHTML='';slot.appendChild(fEl)}
  fmap=new AMap.Map(fEl,mapOpts({zoom:4,center:[104.5,36]}));
  ['mapmove','zoomchange','moveend','complete'].forEach(ev=>fmap.on(ev,drawLines));
 }
 function mountF(){
  const e=$('#fslot');if(!e||!window.AMap||!plugReady||false)return;
- ensureF();
+ ensureF(e);
  if(!fullMode){e.innerHTML='';e.appendChild(fEl);fRes()}
  paintF();
 }
@@ -685,7 +686,7 @@ function paintF(){
  setTimeout(drawLines,50);
 }
 let fT=[];
-function fRes(){fT.forEach(clearTimeout);fT=[0,150,400,900,1800].map(t=>setTimeout(()=>{if(fmap&&fmap.resize)try{fmap.resize()}catch(e){}window.dispatchEvent(new Event('resize'));if(fmap)drawLines()},t))}
+function fRes(){fT.forEach(clearTimeout);fT=[0,150,400,900,1800].map(t=>setTimeout(()=>{[amap,fmap].forEach(m=>{if(m&&m.resize)try{m.resize()}catch(e){}});window.dispatchEvent(new Event('resize'));if(fmap)drawLines()},t))}
 function openFull(){
  if(!fmap||!fEl){toast('地图还没加载好，请稍等');return}
  let o=$('#fsfull');
