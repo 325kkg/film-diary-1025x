@@ -356,7 +356,7 @@ function loadAMap(){
  const sc=document.createElement('script');sc.src='https://webapi.amap.com/maps?v=2.0&key='+AMAP.key;
  sc.onload=()=>{
   amapState=2;tm.engine=performance.now()-T0;tmShow();mEl=document.createElement('div');mEl.className='map';mEl.style.aspectRatio='3/4';mEl.style.backgroundImage='none';{const st=document.createElement('div');st.style.cssText='position:fixed;left:-9999px;top:0;width:'+Math.min(innerWidth-24,600)+'px';st.appendChild(mEl);document.body.appendChild(st)}
-  const s0=startCenter();amap=new AMap.Map(mEl,mapOpts({zoom:s0.z,center:s0.c}));amap.on('complete',()=>{tm.tiles=performance.now()-T0;tmShow()});['mapmove','zoomchange'].forEach(ev=>amap.on(ev,()=>{mvT=Date.now()}));
+  const s0=startCenter();amap=new AMap.Map(mEl,mapOpts({zoom:s0.z,center:s0.c}));amap.on('complete',()=>{tm.tiles=performance.now()-T0;tmShow()});['mapmove','zoomchange'].forEach(ev=>amap.on(ev,()=>{mvT=Date.now();fit=1}));
   amap.on('moveend',()=>{try{const c=amap.getCenter();localStorage.setItem('mapc',JSON.stringify({c:[c.lng,c.lat],z:amap.getZoom()}))}catch(e){}});
   render();
   AMap.plugin(['AMap.MarkerCluster'],()=>{plugReady=true;tm.plug=performance.now()-T0;tmShow();drawMarkers()});
@@ -366,7 +366,7 @@ function loadAMap(){
  document.head.appendChild(sc);
  setTimeout(()=>{if(amapState===1){amapState=3;render()}},20000);
 }
-function mountMap(){mountF();const e=$('#mapslot');if(e&&mEl){e.style.position='relative';if(mEl.parentNode!==e){e.appendChild(mEl);fRes()}if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
+function mountMap(){mountF();const e=$('#mapslot');if(e&&mEl){e.style.position='relative';if(mEl.parentNode!==e){e.appendChild(mEl);if(!mMounted){mMounted=true;fRes()}}if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
 let cluster=null,tips=[],tmr=null;
 function pin(v,n){
  const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
@@ -377,6 +377,8 @@ function pin(v,n){
 function drawMarkers(){
  if(!amap||!plugReady)return;
  const pts=rec('food').filter(v=>v.lng!=null&&(ff==='全部'||v.kind===ff)).map(v=>({lnglat:[v.lng,v.lat],id:v.id,v}));
+ const sg=JSON.stringify([sel,ff,pts.map(p=>[p.id,p.lnglat,p.v.kind,p.v.star,(p.v.img||'').length,p.v.name])]);
+ if(cluster&&sg===mSig)return;mSig=sg;
  if(cluster)cluster.setData(pts);
  else{
   cluster=new AMap.MarkerCluster(amap,pts,{gridSize:70,maxZoom:17,
@@ -651,7 +653,7 @@ async function backfill(){
  }
  bfBusy=false;
 }
-let mvT=0;
+let mvT=0,mMounted=false,fMounted=false,mSig='',fSigM='';
 function zoomToCluster(m,d){
  const xs=d.map(p=>p.lnglat[0]),ys=d.map(p=>p.lnglat[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
  if(x1-x0<2e-4&&y1-y0<2e-4)m.setZoomAndCenter(Math.min(m.getZoom()+3,18),[(x0+x1)/2,(y0+y1)/2]);
@@ -669,7 +671,7 @@ function ensureF(slot){
 function mountF(){
  const e=$('#fslot');if(!e||!window.AMap||!plugReady||false)return;
  ensureF(e);
- if(!fullMode){e.innerHTML='';e.appendChild(fEl);fRes()}
+ if(!fullMode){e.innerHTML='';e.appendChild(fEl);if(!fMounted){fMounted=true;fRes()}}
  paintF();
 }
 function fpin(v,n){
@@ -681,6 +683,8 @@ function paintF(){
  fMks.forEach(m=>fmap.remove(m));fMks=[];
  if(fullMode){
   const pts=dsort(rec('photo')).filter(v=>v.lng!=null).map(v=>({lnglat:[v.lng,v.lat],id:v.id,v}));
+  const sg=JSON.stringify(pts.map(p=>[p.id,p.lnglat,(p.v.img||'').length]));
+  if(fCl&&sg===fSigM)return;fSigM=sg;
   if(fCl)fCl.setData(pts);
   else{fCl=new AMap.MarkerCluster(fmap,pts,{gridSize:70,maxZoom:17,
    renderClusterMarker:c=>{c.marker.setContent(fpin(c.clusterData[0].v,c.count));c.marker.setOffset(new AMap.Pixel(-30,-70))},
@@ -688,7 +692,7 @@ function paintF(){
    fCl.on('click',e=>{if(Date.now()-mvT<400)return;const d=e.clusterData||[];if(d.length>1)zoomToCluster(fmap,d);else if(d[0])openForm('photo',d[0].id)})}
   return;
  }
- if(fCl)fCl.setData([]);
+ if(fCl){fCl.setData([]);fSigM=''}
  fPh.forEach(v=>{const m=new AMap.Marker({position:[v.lng,v.lat],anchor:'center',zIndex:50,content:'<div style="width:9px;height:9px;border-radius:50%;background:#c0392b;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5)"></div>'});fmap.add(m);fMks.push(m)});
  setTimeout(drawLines,50);
 }
@@ -702,7 +706,7 @@ function openFull(){
  $('#fstt').textContent='已点亮 '+fVis.vp.size+' 个省 · '+fVis.vc.size+' 个市';
  fRes();setTimeout(paintF,60);
 }
-function closeFull(){fullMode=false;const o=$('#fsfull');if(o)o.classList.remove('on');if(fEl){fEl.style.border='2px solid var(--ink)';fEl.style.borderRadius='4px'}render()}
+function closeFull(){fullMode=false;fMounted=false;const o=$('#fsfull');if(o)o.classList.remove('on');if(fEl){fEl.style.border='2px solid var(--ink)';fEl.style.borderRadius='4px'}render()}
 function fMe(){if(me&&fmap)fmap.setZoomAndCenter(15,me);else locateNow(true)}
 function photoView(){
  const ph=dsort(rec('photo')),vp=new Set(),vc=new Set(),vd=new Set();
