@@ -111,7 +111,7 @@ const NAV=[['home','🏠','首页'],['tl','🎞️','时间轴'],['diary','📖'
 let items={},meta=null,tab='home',col=null,cur={},ready=false,warn='',H0='',uh='',myid='',placing=null,sel=null,ff='全部';
 const rec=t=>Object.entries(items).filter(([k,v])=>v.type===t).map(([k,v])=>({id:k,...v}));
 const dsort=a=>a.sort((x,y)=>(y.date||y.open||'')<(x.date||x.open||'')?-1:1);
-const who=()=>[meta&&meta.a||'我',meta&&meta.b||'TA'];
+const who=()=>MEM.length?MEM.map(m=>m.name):[meta&&meta.a||'我',meta&&meta.b||'TA'];
 const start=()=>meta&&meta.start;
 const dayN=d=>start()?Math.round((new Date(d+'T00:00')-new Date(start()+'T00:00'))/864e5)+1:null;
 
@@ -119,6 +119,7 @@ function toast(m){const e=document.createElement('div');e.className='toast';e.te
 async function save(id,d){items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
 async function del(id){delete items[id];render();if(col)try{await col.doc(id).delete()}catch(e){toast('删除失败')}}
 
+let ME=null,MEM=[],memLoaded=false,loginMode='pw',lastEmail='';try{lastEmail=localStorage.getItem('lem')||''}catch(e){}
 let touching=false,pend=false,touchTm=null,touchEndT=0;
 const T0=performance.now(),tm={};let RASTER=true;try{RASTER=localStorage.getItem('raster')==='1'}catch(e){}
 const RTILE='https://webrd0{1,2,3,4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=[x]&y=[y]&z=[z]';
@@ -176,8 +177,8 @@ async function loadAll(){
  }catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
  loading=false;ready=true;if(!tm.data){tm.data=performance.now()-T0;tmShow()}if(changed){render();backfill()}
 }
-function startSync(){vers={};col=shim;setTimeout(preloadMap,0);loadAll();poll=setInterval(()=>{if(!document.hidden)loadAll()},15000)}
-function stopSync(){if(poll){clearInterval(poll);poll=null}col=null;items={};meta=null}
+function startSync(){vers={};col=shim;setTimeout(preloadMap,0);loadMembers().then(()=>loadAll());poll=setInterval(()=>{if(!document.hidden)loadAll()},15000)}
+function stopSync(){if(poll){clearInterval(poll);poll=null}col=null;items={};meta=null;MEM=[];ME=null;memLoaded=false}
 function apply(a){
  if(a){if(poll)return;authed=true;startSync()}
  else{authed=false;stopSync();ready=true;render()}
@@ -213,6 +214,7 @@ function card(v){
 }
 
 function view(){
+ if(memLoaded&&!MEM.length)return '<div class="card static"><h3>🔒 这个账号还没有加入</h3><p>请联系管理员把你的账号加入成员名单，或换一个账号登录。</p><p><button class="btn o" onclick="logout()">退出登录</button></p></div>';
  if(!meta)return `<div class="card static"><h3>🎞️ 先装上胶卷</h3><label>你的昵称</label><input id="sa"><label>TA 的昵称</label><input id="sb"><label>在一起的日期</label><input id="ss" type="date" value="${td()}"><p><button class="btn" onclick="setup()">开始记录</button></p></div>`;
  if(tab==='home')return home();
  if(tab==='tl')return tlView();
@@ -250,7 +252,8 @@ function home(){
  <div class="card static"><h3>🎲 回忆盲盒</h3><div id="box" class="mut">随机抽一段你们的回忆</div><p><button class="btn o" onclick="blind()">抽一张</button></p></div>
  ${moodChart()}
  <div class="card static"><h3>📊 我们的数据</h3>日记 ${rec('diary').length} 篇 · 照片 ${rec('photo').length} 张 · 情话 ${rec('letter').length} 封 · 足迹 ${ps.length} 处 · 复盘 ${rec('fight').length} 次</div>
- <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改密码</button> <button class="btn o" onclick="iconPick()">设置图标</button></p>`;
+ <p class="mut" style="text-align:center">当前账号：${esc((ME&&ME.name)||'')} · ${esc((ME&&ME.email)||'')}</p>
+ <p style="text-align:center"><button class="btn o" onclick="exportData()">导出备份</button> <button class="btn o" onclick="setup(1)">修改昵称/日期</button> <button class="btn o" onclick="pwForm()">修改我的密码</button> <button class="btn o" onclick="logout()">退出登录</button> <button class="btn o" onclick="iconPick()">设置图标</button></p>`;
 }
 function moodChart(){
  const a=dsort(rec('mood')).reverse().slice(-14);
@@ -275,7 +278,7 @@ function setup(edit){
 function render(){
  if(!ready)return;
  if(touching){pend=true;return}
- if(!unlockedNow()){$('#nav').innerHTML='';$('#fab').style.display='none';$('#sub').textContent=warn||'LOCKED';$('#ttl').textContent='我们的胶片日记';$('#app').innerHTML=`<div class="card static" style="text-align:center"><h3>🔒 输入密码</h3><input id="pwi" type="password" inputmode="numeric" onkeydown="if(event.key==='Enter')unlock()"><p><button class="btn" onclick="unlock()">打开我们的日记</button></p></div>`;return}
+ if(!unlockedNow()){$('#nav').innerHTML='';$('#fab').style.display='none';$('#sub').textContent=warn||'LOCKED';$('#ttl').textContent='我们的胶片日记';$('#app').innerHTML=loginView();return}
  $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${i} ${n}</button>`).join('');
  $('#ttl').textContent=meta?`${meta.a} & ${meta.b}`:'我们的胶片日记';
  $('#sub').textContent=warn||(meta?'SINCE '+meta.start:'LOVE FILM JOURNAL');
@@ -298,8 +301,8 @@ function openForm(type,id,pos){
   if(kind==='p')return `<label>${l}</label><input type="file" accept="image/*" onchange="pick(this)"><img id="pv" src="${cur.img}" style="width:100%;margin-top:6px;${cur.img?'':'display:none'}" alt="">`;
  }).join('');
  let lastBy='';try{lastBy=localStorage.getItem('by')||''}catch(e){}
- const by=d.by||lastBy||who()[0];
- $('#dlg').innerHTML=`<h3>${t.i} ${id?'编辑':'新增'}${t.n}</h3><label>记录人</label><select id="by">${who().map(x=>`<option ${x===by?'selected':''}>${esc(x)}</option>`).join('')}</select>${f}<p style="display:flex;gap:8px;justify-content:space-between"><span>${id?'<button class="btn o" onclick="rm()">删除</button>':''}</span><span><button class="btn o" onclick="$(\'#dlg\').close()">取消</button> <button class="btn" onclick="submit()">保存</button></span></p>`;
+ const by=d.by||(ME&&ME.name)||who()[0];
+ $('#dlg').innerHTML=`<h3>${t.i} ${id?'编辑':'新增'}${t.n}</h3><label>记录人</label><div class="mut" style="margin-bottom:4px">${esc(by)}（自动使用你登录的账号）</div><input type="hidden" id="by" value="${esc(by)}">${f}<p style="display:flex;gap:8px;justify-content:space-between"><span>${id?'<button class="btn o" onclick="rm()">删除</button>':''}</span><span><button class="btn o" onclick="$(\'#dlg\').close()">取消</button> <button class="btn" onclick="submit()">保存</button></span></p>`;
  $('#dlg').showModal();
  if(type==='photo'){cur.prov=d.prov||'';cur.time=d.time||'';cur.ad=d.ad||'';cur.dist=d.dist||'';cur.poi=d.poi||'';cur.fn=d.fn||'';const pe=document.querySelector('#dlg [data-k=place]');if(pe)pe.onchange=()=>geoPlace(pe.value)}
 }
@@ -781,7 +784,7 @@ function togCk(id,i){const v=items[id],c=new Set((v.ck||'').split(',').filter(Bo
 function openLetter(id){
  const v=items[id];if(!v)return;
  if(v.open&&dd(v.open)>0){toast('还没到拆封的日子，还有 '+dd(v.open)+' 天');return}
- let me2='';try{me2=localStorage.getItem('by')||''}catch(e){}
+ let me2=(ME&&ME.name)||'';
  if(me2&&me2!==v.by&&!v.read)save(id,{...v,read:td()});
  $('#dlg').innerHTML=`<div style="background:${PAPER[v.paper]||PAPER['米色信纸']};color:#3b2f25;padding:16px;border-radius:4px;animation:unf .5s ease-out;transform-origin:top"><div style="display:flex;justify-content:space-between"><div style="font:11px 'Courier New',monospace;opacity:.65">POST · ${esc(v.date||'')}</div><div style="font-size:30px">${esc(v.stamp||'❤️')}</div></div><h3 style="color:#3b2f25">${esc(v.title)}</h3><div style="white-space:pre-wrap;line-height:28px;${v.paper==='格子信纸'?'background-image:repeating-linear-gradient(transparent,transparent 27px,rgba(0,0,0,.12) 28px);':''}">${esc(v.text)}</div><div style="text-align:right;margin-top:10px;font-style:italic">— ${esc(v.by||'')}</div></div><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button> <button class="btn" onclick="$('#dlg').close();openForm('letter','${id}',{edit:1})">编辑/删除</button></p>`;
  $('#dlg').showModal();
@@ -826,41 +829,59 @@ function mapBg(){
  i.click();
 }
 function unlockedNow(){return authed}
-async function unlock(){
+function loginView(){
+ const pw=loginMode==='pw';
+ return `<div class="card static"><h3>🎞️ 登录我们的日记</h3><label>邮箱</label><input id="lem" type="email" autocomplete="email" value="${esc(lastEmail)}">${pw?`<label>密码</label><input id="lpw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"><p><button class="btn" onclick="login()">登录</button></p>`:`<p><button class="btn o" onclick="sendCode()">发送验证码到邮箱</button></p><label>邮箱里的验证码</label><input id="lcd" inputmode="numeric" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyCode()"><p><button class="btn" onclick="verifyCode()">验证并登录</button></p>`}<p class="mut"><a href="#" onclick="loginMode='${pw?'code':'pw'}';render();return false">${pw?'改用邮箱验证码登录':'改用密码登录'}</a></p></div>`;
+}
+function errMsg(j,r){return j.msg||j.error_description||j.message||('HTTP '+r.status)}
+async function login(){
  if(!CONFIGURED){toast(warn||'尚未配置');return}
+ const em=$('#lem').value.trim(),pw=$('#lpw').value;if(!em||!pw){toast('请输入邮箱和密码');return}
  toast('登录中…');
- try{await authReq('password',{email:LOGIN_EMAIL,password:$('#pwi').value});apply(true)}
+ try{await authReq('password',{email:em,password:pw});try{localStorage.setItem('lem',em)}catch(e){}apply(true)}
  catch(e){toast(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':'登录失败：'+e.message)}
 }
-function pwBanner(){
- const r=items.pwreq;if(!r)return '';
- if(r.by===myid)return `<div class="card static"><b>🔑 已申请修改密码</b>，等待对方同意。<p><button class="btn o" onclick="pwDecide(0)">撤回申请</button></p></div>`;
- return `<div class="card static"><b>🔑 ${esc(r.name||'对方')} 申请把密码改为：</b> <span class="stamp">${esc(r.pw)}</span><p>是否同意？同意后，下次登录需使用新密码。</p><p><button class="btn" onclick="pwDecide(1)">同意</button> <button class="btn o" onclick="pwDecide(0)">拒绝</button></p></div>`;
+async function sendCode(){
+ const em=$('#lem').value.trim();if(!em){toast('请先填邮箱');return}
+ try{const r=await api('/auth/v1/otp',{method:'POST',body:JSON.stringify({email:em,create_user:false})});
+  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(errMsg(j,r))}
+  try{localStorage.setItem('lem',em)}catch(e){}toast('验证码已发送，请查看邮箱（也看看垃圾箱）')}
+ catch(e){toast('发送失败：'+e.message)}
 }
+async function verifyCode(){
+ const em=$('#lem').value.trim(),cd=$('#lcd').value.trim();if(!em||!cd){toast('请填写邮箱和验证码');return}
+ try{const r=await api('/auth/v1/verify',{method:'POST',body:JSON.stringify({type:'email',email:em,token:cd})});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(errMsg(j,r));
+  tok={access:j.access_token,refresh:j.refresh_token,exp:Date.now()+(j.expires_in-60)*1000};saveTok();apply(true)}
+ catch(e){toast('验证失败：'+e.message)}
+}
+function jwtInfo(){try{return JSON.parse(atob(tok.access.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))}catch(e){return {}}}
+async function loadMembers(){
+ try{MEM=(await rest('members?select=uid,name,email'))||[]}catch(e){MEM=[]}
+ const j=tok?jwtInfo():{};
+ ME=MEM.find(m=>m.uid===j.sub)||(MEM.length?null:{uid:j.sub,name:(j.email||'我').split('@')[0],email:j.email});
+ if(ME&&!ME.email)ME.email=j.email;
+ memLoaded=true;
+}
+async function logout(){
+ if(!confirm('确定退出登录吗？'))return;
+ try{const h=await bearer();api('/auth/v1/logout',{method:'POST',headers:h})}catch(e){}
+ tok=null;saveTok();try{localStorage.removeItem('amcfg')}catch(e){}apply(false);
+}
+function pwBanner(){return ''}
 async function setPw(pw){
  const h=await bearer();
  const r=await api('/auth/v1/user',{method:'PUT',headers:h,body:JSON.stringify({password:pw})});
  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.msg||j.message||('HTTP '+r.status))}
 }
-async function pwDecide(ok){
- const r=items.pwreq;if(!r)return;
- if(ok&&r.by!==myid){
-  try{await setPw(r.pw)}catch(e){toast('修改失败：'+(e.code||e.message));return}
-  toast('已同意，密码已更新');
- }
- await del('pwreq');
-}
 function pwForm(){
- $('#dlg').innerHTML=`<h3>🔑 申请修改密码</h3><label>新密码（至少6位）</label><input id="np1" type="password"><label>再输一次</label><input id="np2" type="password"><p class="mut">提交后需要对方点“同意”才会生效，对方会在页面上看到新密码。</p><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">取消</button> <button class="btn" onclick="pwSubmit()">提交申请</button></p>`;
+ $('#dlg').innerHTML=`<h3>🔑 修改我的密码</h3><label>新密码（至少 8 位）</label><input id="np1" type="password" autocomplete="new-password"><label>再输一次</label><input id="np2" type="password" autocomplete="new-password"><p class="mut">只会修改你自己账号的密码，不影响对方。</p><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">取消</button> <button class="btn" onclick="pwSubmit()">保存</button></p>`;
  $('#dlg').showModal();
 }
 async function pwSubmit(){
- const a=$('#np1').value;if(a.length<6){toast('至少6位');return}
+ const a=$('#np1').value;if(a.length<8){toast('至少 8 位');return}
  if(a!==$('#np2').value){toast('两次输入不一致');return}
- let nm='';try{nm=localStorage.getItem('by')||''}catch(e){}
- $('#dlg').close();
- await save('pwreq',{pw:a,by:myid,name:nm||who()[0],at:Date.now()});
- toast('已提交，等待对方同意');
+ try{await setPw(a);$('#dlg').close();toast('密码已修改')}catch(e){toast('修改失败：'+(e.message||e.code))}
 }
 function exportData(){
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(items,null,1)],{type:'application/json'}));a.download='love-journal-backup.json';a.click();
