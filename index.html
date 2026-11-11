@@ -39,7 +39,8 @@ main{max-width:640px;margin:0 auto;padding:14px 14px 90px}
 .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 h3{margin:0 0 6px;font:700 15px "Courier New","Songti SC",monospace;letter-spacing:1px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.pol{background:var(--pol);padding:8px 8px 10px;box-shadow:2px 4px 8px rgba(0,0,0,.25);transform:rotate(var(--r,0deg));cursor:pointer}
+.pcnt{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;font:700 11px/1 sans-serif;padding:3px 6px;border-radius:9px;z-index:2}
+.pol{position:relative;background:var(--pol);padding:8px 8px 10px;box-shadow:2px 4px 8px rgba(0,0,0,.25);transform:rotate(var(--r,0deg));cursor:pointer}
 .pol img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:sepia(.35) contrast(1.05)}
 .pol p{margin:6px 0 0;font:12px "Courier New",monospace;text-align:center}
 .tl{border-left:2px solid var(--acc);margin-left:8px;padding-left:14px}
@@ -241,7 +242,7 @@ function view(){
  if(tab==='food')return foodView();
  const a=dsort(rec(tab));
  if(!a.length)return empty();
- if(tab==='photo')return `<div class="grid">${a.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.cap||'')}<br><span class="mut">${esc(v.date||'')}</span></p></div>`).join('')}</div>`;
+ if(tab==='photo')return `<div class="grid">${a.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${pcnt(v)}${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.cap||'')}<br><span class="mut">${esc(v.date||'')}</span></p></div>`).join('')}</div>`;
  let extra='';
  if(tab==='place'){const c=new Set(a.map(v=>v.city).filter(Boolean)).size;extra=`<div class="card static" style="text-align:center">🍜 吃过 <b>${a.filter(v=>v.kind==='吃过').length}</b> 家 · 📍 去过 <b>${a.filter(v=>v.kind==='去过').length}</b> 处 · 🏙️ <b>${c}</b> 座城市</div>`}
  if(tab==='plan'){const w=a.filter(v=>v.kind==='心愿清单');extra=`<div class="card static" style="text-align:center">心愿完成进度 <b>${w.filter(v=>v.done).length}/${w.length}</b></div>`}
@@ -320,7 +321,7 @@ $('#fab').onclick=()=>{if(tab==='bill'){openBill();return}if(tab==='plan'&&pTab=
 
 function openForm(type,id,pos){
  if(type==='letter'&&id&&!(pos&&pos.edit))return openLetter(id);
- const t=T[type],d=id?items[id]:((pos&&pos.pre)||{});cur={type,id,img:d.img||'',x:d.x!=null?d.x:(pos&&pos.x),y:d.y!=null?d.y:(pos&&pos.y),lng:d.lng!=null?d.lng:(pos&&pos.lng),lat:d.lat!=null?d.lat:(pos&&pos.lat)};
+ const t=T[type],d=id?items[id]:((pos&&pos.pre)||{});cur={type,id,imgs:[d.img,...(d.more||[])].filter(Boolean),x:d.x!=null?d.x:(pos&&pos.x),y:d.y!=null?d.y:(pos&&pos.y),lng:d.lng!=null?d.lng:(pos&&pos.lng),lat:d.lat!=null?d.lat:(pos&&pos.lat)};
  const f=t.f.map(([k,l,kind,o])=>{
   const v=d[k]!==undefined?d[k]:(kind==='d'&&k==='date'?td():'');
   if(kind==='t')return `<label>${l}</label><input data-k="${k}" value="${esc(v)}">`;
@@ -328,7 +329,7 @@ function openForm(type,id,pos){
   if(kind==='d')return `<label>${l}</label><input type="date" data-k="${k}" value="${esc(v)}">`;
   if(kind==='c')return `<label><input type="checkbox" data-k="${k}" ${v?'checked':''}> ${l}</label>`;
   if(kind==='s')return `<label>${l}</label><select data-k="${k}" data-s="1">${o.map((x,i)=>`<option value="${i}" ${(k==='score'?String(v===''?3:v)===String(i):v===x)?'selected':''}>${x}</option>`).join('')}</select>`;
-  if(kind==='p')return `<label>${l}</label><input type="file" accept="image/*" onchange="pick(this)"><img id="pv" src="${cur.img}" style="width:100%;margin-top:6px;${cur.img?'':'display:none'}" alt="">`;
+  if(kind==='p')return `<label>${l}（可一次选多张，最多 ${MAXP} 张）</label><input type="file" accept="image/*" multiple onchange="pick(this)"><div id="pvs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px">${imgsHTML()}</div>`;
  }).join('');
  let lastBy='';try{lastBy=localStorage.getItem('by')||''}catch(e){}
  const by=d.by||(ME&&ME.name)||who()[0];
@@ -336,20 +337,29 @@ function openForm(type,id,pos){
  $('#dlg').showModal();
  if(type==='photo'){cur.prov=d.prov||'';cur.time=d.time||'';cur.ad=d.ad||'';cur.dist=d.dist||'';cur.poi=d.poi||'';cur.fn=d.fn||'';const pe=document.querySelector('#dlg [data-k=place]');if(pe)pe.onchange=()=>geoPlace(pe.value)}
 }
-function pick(el){
- const fl=el.files[0];if(!fl)return;if(cur.type==='photo')readMeta(fl);
- const im=new Image();im.onload=()=>{
-  let w=cur.type==='photo'?360:cur.type==='food'?480:640,q=.7,u;const c=document.createElement('canvas');
-  do{const s=Math.min(1,w/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);u=c.toDataURL('image/jpeg',q);w*=.85;q*=.92}while(u.length>(cur.type==='photo'?40000:cur.type==='food'?80000:150000)&&w>200);
-  cur.img=u;const p=$('#pv');p.src=u;p.style.display='block'};
- im.src=URL.createObjectURL(fl);
+const MAXP=9,pcnt=v=>v&&v.more&&v.more.length?`<span class="pcnt">📷 ${1+v.more.length}</span>`:'';
+function imgsHTML(){return (cur.imgs||[]).map((u,i)=>`<div style="position:relative"><img src="${u}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;display:block" alt=""><button type="button" class="btn o" style="position:absolute;top:2px;right:2px;padding:0 6px;font-size:12px" onclick="rmImg(${i})">✕</button>${i?`<button type="button" class="btn o" style="position:absolute;left:2px;bottom:2px;padding:0 5px;font-size:11px" onclick="coverImg(${i})">设为封面</button>`:'<span class="tag" style="position:absolute;left:2px;bottom:2px;font-size:11px">封面</span>'}</div>`).join('')}
+function redrawImgs(){const e=$('#pvs');if(e)e.innerHTML=imgsHTML()}
+function rmImg(i){cur.imgs.splice(i,1);redrawImgs()}
+function coverImg(i){const [u]=cur.imgs.splice(i,1);cur.imgs.unshift(u);redrawImgs()}
+function shrink(fl,type){return new Promise(res=>{const im=new Image();im.onload=()=>{
+ let w=type==='photo'?360:type==='food'?480:640,q=.7,u;const c=document.createElement('canvas');
+ do{const s=Math.min(1,w/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);u=c.toDataURL('image/jpeg',q);w*=.85;q*=.92}while(u.length>(type==='photo'?40000:type==='food'?80000:150000)&&w>200);
+ URL.revokeObjectURL(im.src);res(u)};im.onerror=()=>res('');im.src=URL.createObjectURL(fl)})}
+async function pick(el){
+ const fls=[...el.files];el.value='';if(!fls.length)return;
+ const room=MAXP-cur.imgs.length;if(room<=0){toast('最多放 '+MAXP+' 张');return}
+ const use=fls.slice(0,room);if(fls.length>room)toast('最多 '+MAXP+' 张，多余的已忽略');
+ if(cur.type==='photo'&&!cur.imgs.length)readMeta(use[0]);
+ for(const fl of use){const u=await shrink(fl,cur.type);if(u)cur.imgs.push(u)}
+ redrawImgs();
 }
 function submit(){
  const t=T[cur.type],o={type:cur.type,by:$('#by').value};
  try{localStorage.setItem('by',o.by)}catch(e){}
  document.querySelectorAll('#dlg [data-k]').forEach(e=>{const k=e.dataset.k;o[k]=e.type==='checkbox'?e.checked:e.dataset.s?(k==='score'||k==='star'?Number(e.value):t.f.find(x=>x[0]===k)[3][e.value]):e.value});
  if(cur.type==='star')return;
- if(cur.type==='photo'||cur.type==='food')o.img=cur.img;
+ if(cur.type==='photo'||cur.type==='food'){o.img=cur.imgs[0]||'';if(cur.imgs.length>1)o.more=cur.imgs.slice(1);else delete o.more}
  if(cur.type==='place'||cur.type==='food')o.star=['★','★★','★★★','★★★★','★★★★★'][o.star];
  if(cur.type==='food'&&cur.x!=null){o.x=cur.x;o.y=cur.y}
  if((cur.type==='food'||cur.type==='photo')&&cur.lng!=null){o.lng=cur.lng;o.lat=cur.lat}
@@ -474,7 +484,7 @@ function closeFoodFull(){
 function fdClose(){sel=null;const e=$('#fdet');if(e){e.style.display='none';e.innerHTML=''}if(foodFull){mSig='';drawMarkers()}}
 function showFD(id){
  const v=items[id],e=$('#fdet');if(!v||!e)return;const eat=v.kind==='吃过';e.style.display='block';
- e.innerHTML=`<div class="row" style="align-items:center"><h3 style="margin:0">${eat?'😋':'🤤'} ${esc(v.name)} <span style="color:var(--acc)">${esc(v.star||'')}</span></h3><button class="btn o" onclick="fdClose()">✕</button></div><div class="mut">${esc(v.addr||'')}</div>${navLinks(v)}<p style="margin:8px 0 0"><a href="#" onclick="fdMore=!fdMore;showFD('${id}');return false" style="color:var(--acc)">${fdMore?'▼ 收起详情':'▲ 展开详情'}</a></p>${fdMore?`${v.img?`<img src="${v.img}" alt="" style="width:100%;margin-top:8px;border-radius:4px;filter:sepia(.25)">`:''}<div style="margin-top:6px"><span class="tag">${esc(v.kind||'')}</span>${v.cuisine?`<span class="tag">${esc(v.cuisine)}</span>`:''}${v.price?`<span class="tag">人均 ${esc(v.price)}</span>`:''}${v.date?`<span class="tag">${esc(v.date)}</span>`:''}${v.by?`<span class="tag">${esc(v.by)}</span>`:''}</div>${v.note?`<div style="white-space:pre-wrap;margin-top:6px">${esc(v.note)}</div>`:''}<p style="text-align:right"><button class="btn o" onclick="openForm('food','${id}')">✏️ 编辑</button></p>`:''}`;
+ e.innerHTML=`<div class="row" style="align-items:center"><h3 style="margin:0">${eat?'😋':'🤤'} ${esc(v.name)} <span style="color:var(--acc)">${esc(v.star||'')}</span></h3><button class="btn o" onclick="fdClose()">✕</button></div><div class="mut">${esc(v.addr||'')}</div>${navLinks(v)}<p style="margin:8px 0 0"><a href="#" onclick="fdMore=!fdMore;showFD('${id}');return false" style="color:var(--acc)">${fdMore?'▼ 收起详情':'▲ 展开详情'}</a></p>${fdMore?`${v.img?`<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px">${[v.img,...(v.more||[])].map(u=>`<img src="${u}" alt="" style="height:160px;flex:none;border-radius:4px;filter:sepia(.25)">`).join('')}</div>`:''}<div style="margin-top:6px"><span class="tag">${esc(v.kind||'')}</span>${v.cuisine?`<span class="tag">${esc(v.cuisine)}</span>`:''}${v.price?`<span class="tag">人均 ${esc(v.price)}</span>`:''}${v.date?`<span class="tag">${esc(v.date)}</span>`:''}${v.by?`<span class="tag">${esc(v.by)}</span>`:''}</div>${v.note?`<div style="white-space:pre-wrap;margin-top:6px">${esc(v.note)}</div>`:''}<p style="text-align:right"><button class="btn o" onclick="openForm('food','${id}')">✏️ 编辑</button></p>`:''}`;
 }
 function foodView(){
  if(!(AMAP.key&&AMAP.sec))return foodViewOld();
@@ -685,26 +695,12 @@ function openPhotosOld(id){
 }
 function openPhotos(id){
  const v=items[id]||{};
- if(/^\d{4}:\d\d:\d\d \d\d:\d\d/.test(v.time||'')){let ok='';try{ok=localStorage.getItem('scok')}catch(e){}return ok==='1'?runFind(id):findGuide(id)}
+ if(/^\d{4}:\d\d:\d\d \d\d:\d\d/.test(v.time||'')){return runFind(id)}
  toast('这张照片没有记录拍摄时间，改用文件名/日期查找');openPhotosOld(id);
 }
 function runFind(id){
  const t=items[id].time.slice(0,19).replace(/^(\d{4}):(\d\d):(\d\d)/,'$1-$2-$3');
  location.href='shortcuts://run-shortcut?name='+encodeURIComponent('找照片')+'&input=text&text='+encodeURIComponent(t);
-}
-function scDone(id){try{localStorage.setItem('scok','1')}catch(e){}$('#dlg').close();runFind(id)}
-function findGuide(id){
- showDlg(`<h3>📲 一键找到相册里的这张照片</h3><p class="mut">网页没法直接打开相册里的某一张，但可以让 iPhone 自带的“快捷指令”按拍摄时间去找。只需要建一次：</p>
- <ol style="padding-left:18px;margin:6px 0">
- <li>打开“快捷指令”App，右上角点 <b>＋</b> 新建，名字改成 <b>找照片</b>（必须一模一样）。</li>
- <li>点“添加操作”，搜索并添加 <b>从输入中获取日期</b>，输入保持“快捷指令输入”。</li>
- <li>再添加 <b>调整日期</b>：日期选上一步的“日期”，选 <b>减去 1 分钟</b>。再添加 <b>设定变量</b>，名字填 <b>开始</b>。</li>
- <li>再添加一个 <b>调整日期</b>：日期仍选第 2 步的“日期”，选 <b>加上 1 分钟</b>。再添加 <b>设定变量</b>，名字填 <b>结束</b>。</li>
- <li>添加 <b>查找照片</b>：点“添加过滤器”，选 <b>拍摄日期</b> → <b>介于</b>，两个框分别选变量“开始”和“结束”。</li>
- <li>最后添加 <b>快速查看</b>，输入选“照片”。点“完成”。</li>
- </ol>
- <p class="mut">第一次运行时，手机会问是否允许快捷指令访问照片，选“允许”。之后在照片卡片点“在相册中找”，就会跳到快捷指令并直接显示那张照片（前后一分钟内连拍的也会一起出现）。</p>
- <p style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap"><button class="btn o" onclick="$('#dlg').close()">关闭</button>${id?`<button class="btn o" onclick="$('#dlg').close();openPhotosOld('${id}')">先用文件名搜</button><button class="btn" onclick="scDone('${id}')">我建好了，试一下</button>`:''}</p>`);
 }
 let fmap=null,fEl=null,fLayers=[],fMks=[],fSig='',fPh=[],fSlot={},fVis={vp:new Set(),vc:new Set(),vd:new Set()};
 function drawLines(){
@@ -775,7 +771,7 @@ let lastIds=[],lastMode='';
 function showCluster(ids,m,mode){
  lastIds=ids;lastMode=mode;
  const L=ids.map(id=>items[id]?{...items[id],id}:null).filter(Boolean);
- const cell=v=>`<div class="pol" style="--r:0deg" onclick="$('#dlg').close();${mode==='food'?`selPin('${v.id}')`:`openForm('photo','${v.id}')`}">${v.img?`<img src="${v.img}" alt="">`:`<div style="height:90px;display:flex;align-items:center;justify-content:center;font-size:30px">${mode==='food'?'🍜':'📷'}</div>`}<p>${esc(mode==='food'?(v.name||''):(v.poi||v.place||''))}<br><span class="mut">${esc(v.date||'')}</span></p></div>`;
+ const cell=v=>`<div class="pol" style="--r:0deg" onclick="$('#dlg').close();${mode==='food'?`selPin('${v.id}')`:`openForm('photo','${v.id}')`}">${pcnt(v)}${v.img?`<img src="${v.img}" alt="">`:`<div style="height:90px;display:flex;align-items:center;justify-content:center;font-size:30px">${mode==='food'?'🍜':'📷'}</div>`}<p>${esc(mode==='food'?(v.name||''):(v.poi||v.place||''))}<br><span class="mut">${esc(v.date||'')}</span></p></div>`;
  $('#dlg').innerHTML=`<h3>这里共有 ${L.length} ${mode==='food'?'家店':'张照片'}</h3><div class="grid">${L.map(cell).join('')}</div><p style="text-align:right"><button class="btn o" onclick="zoomLast()">放大到这里</button> <button class="btn" onclick="$('#dlg').close()">关闭</button></p>`;
  $('#dlg').showModal();
 }
@@ -845,9 +841,9 @@ function photoView(){
   const p=[500+(v.lng-104.5)*9.5,550-(v.lat-36)*11];let bi=free[0],bd=1e9;
   free.forEach(i=>{const d=(SL[i][0]+80-p[0])**2+(SL[i][1]+95-p[1])**2;if(d<bd){bd=d;bi=i}});free.splice(free.indexOf(bi),1);
   const sx=SL[bi][0],sy=SL[bi][1];fSlot[v.id]=[sx+80,sy+95];
-  return `<div class="ft" style="left:${sx/10}%;top:${sy/11}%;transform:rotate(${(n%5-2)*1.2}deg)" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="">`:''}<div>${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,7))}</div></div>`}).join('');
- const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
- return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片<div class="mut" style="margin-top:4px"><a href="#" onclick="findGuide();return false" style="color:var(--acc)">📲 设置“在相册中找”快捷指令</a></div></div>
+  return `<div class="ft" style="left:${sx/10}%;top:${sy/11}%;transform:rotate(${(n%5-2)*1.2}deg)" onclick="openForm('photo','${v.id}')">${pcnt(v)}${v.img?`<img src="${v.img}" alt="">`:''}<div>${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,7))}</div></div>`}).join('');
+ const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${pcnt(v)}${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
+ return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片</div>
  <div id="fwrap" style="position:relative;width:100%;padding-top:110%;background:var(--card);border:1px solid var(--line);border-radius:4px"><div id="fslot" style="position:absolute;left:20%;top:22.7%;width:60%;height:54.5%"><div class="mapph" style="height:100%;aspect-ratio:auto">🗺️ 地图加载中…</div></div><button class="locb" style="top:8px;right:8px;z-index:6;width:auto;border-radius:18px;padding:0 14px;font-size:14px" onclick="openFull()">⛶ 全屏地图</button><svg id="flines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></svg>${tiles}</div>
  <p class="mut" style="text-align:center">点右上角“全屏地图”可以大图查看、放大到街道，照片会以缩略图标在地图上，靠得近的会合并成数字</p>${wall}`;
 }
