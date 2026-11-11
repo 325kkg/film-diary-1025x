@@ -1112,7 +1112,23 @@ function ate(id){save(id,{...items[id],kind:'吃过',date:td(),eats:[td()]}).the
 const eatList=v=>v.kind!=='吃过'?[]:(v.eats&&v.eats.length?v.eats:[v.date||'']),eatN=v=>eatList(v).length;
 async function eatAgain(id){const v=items[id];if(!v)return;const L=eatList(v).slice();L.push(td());await save(id,{...v,kind:'吃过',date:td(),eats:L});toast('已记录，第 '+L.length+' 次');}
 async function eatUndo(id){const v=items[id];if(!v)return;const L=eatList(v).slice();if(L.length<=1)return;L.pop();await save(id,{...v,eats:L,date:L[L.length-1]||v.date});}
-function eatBar(v){if(v.kind!=='吃过')return '';const n=eatN(v);return `<div style="margin:6px 0"><span class="tag">🍽 吃过 ${n} 次</span> <button class="btn o" style="padding:2px 8px;font-size:12px" onclick="event.stopPropagation();eatAgain('${v.id}')">＋再吃一次</button>${n>1?` <button class="btn o" style="padding:2px 8px;font-size:12px" onclick="event.stopPropagation();eatUndo('${v.id}')">－1</button>`:''}</div>`}
+function eatSave(id,L){const v=items[id],ds=L.filter(Boolean).sort();L=L.filter(d=>!d).concat(ds);return save(id,{...v,kind:'吃过',eats:L,date:ds.length?ds[ds.length-1]:(v.date||'')})}
+function openEats(id){
+ const v=items[id];if(!v)return;const L=eatList(v).map((d,i)=>({d,i}));
+ showDlg(`<h3>🍽 ${esc(v.name)} 的就餐记录</h3><p class="mut">共 ${L.length} 次。可以补记以前去过的日期；不记得具体哪天，就用下面的“日期不详”。</p>${L.slice().sort((a,b)=>a.d<b.d?1:-1).map(x=>`<div class="row" style="margin:5px 0"><span>${x.d?esc(x.d):'日期不详'}</span><button class="btn o" style="padding:2px 8px" onclick="eatDel('${id}',${x.i})">删</button></div>`).join('')}<hr style="border:0;border-top:1px dashed var(--line)"><label>补记一次（选择当时的日期）</label><div style="display:flex;gap:6px"><input type="date" id="ed" max="${td()}"><button class="btn" onclick="eatAdd('${id}',1)">补记</button></div><label>不记得日期，一次补几次</label><div style="display:flex;gap:6px"><input type="number" id="en" min="1" max="50" value="1" style="width:90px"><button class="btn o" onclick="eatAdd('${id}',2)">补记（日期不详）</button></div><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button></p>`);
+}
+async function eatAdd(id,mode){
+ const v=items[id];if(!v)return;const L=eatList(v).slice();
+ if(mode===1){const d=$('#ed').value;if(!d){toast('请先选择日期');return}L.push(d)}
+ else{const n=Math.min(50,Math.max(1,parseInt($('#en').value)||1));for(let i=0;i<n;i++)L.push('')}
+ await eatSave(id,L);openEats(id);
+}
+async function eatDel(id,i){
+ const v=items[id];if(!v)return;const L=eatList(v).slice();
+ if(L.length<=1){toast('至少保留一次；想取消可把状态改回“想吃”');return}
+ L.splice(i,1);await eatSave(id,L);openEats(id);
+}
+function eatBar(v){if(v.kind!=='吃过')return '';const n=eatN(v);return `<div style="margin:6px 0"><span class="tag">🍽 吃过 ${n} 次</span> <button class="btn o" style="padding:2px 8px;font-size:12px" onclick="event.stopPropagation();eatAgain('${v.id}')">＋再吃一次</button> <button class="btn o" style="padding:2px 8px;font-size:12px" onclick="event.stopPropagation();openEats('${v.id}')">🗓 补记</button>${n>1?` <button class="btn o" style="padding:2px 8px;font-size:12px" onclick="event.stopPropagation();eatUndo('${v.id}')">－1</button>`:''}</div>`}
 let esTab='shop';
 function openEatStats(t){
  if(t)esTab=t;
