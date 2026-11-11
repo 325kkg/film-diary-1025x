@@ -82,6 +82,10 @@ html,body{max-width:100%;overflow-x:hidden}.card,.mut,.pol p,.tlt,.tld{overflow-
 .amap-marker,.amap-marker-content{pointer-events:none!important}
 #mapslot,#mapslot *,#fslot,#fslot *,#fsslot,#fsslot *{touch-action:none}
 nav button{position:relative}
+button,input,select,textarea,a,label,.card,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button,.btn{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.btn:active{opacity:.6}
+input,select,textarea{font-size:16px}
 .bdg{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#d93025;color:#fff;font:700 10px/16px sans-serif;text-align:center;box-shadow:0 0 0 2px var(--bg)}
 #ffull{position:fixed;inset:0;z-index:150;background:var(--bg);display:none}#ffull.on{display:block}
 #ffbar{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;gap:10px;align-items:center;z-index:5;pointer-events:none}#ffbar>*{pointer-events:auto}
