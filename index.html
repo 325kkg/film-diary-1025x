@@ -107,7 +107,7 @@ const T={
  fight:{n:'吵架复盘',i:'🩹',f:[['date','日期','d'],['level','严重程度','s',['小摩擦','有点气','比较严重','很严重']],['cause','起因（发生了什么）','a'],['feelA','我当时的感受','a'],['feelB','TA 当时的感受（猜测或问过后填）','a'],['need','我们各自真正想要的','a'],['fix','怎么和好的','a'],['dur','和好用了多久','s',['当天','1天','2-3天','一周以上','还没和好']],['learn','下次怎么做','a'],['promise','我们的约定','a']]},
  food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['addr','地址','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a'],['img','店铺照片（可选）','p']]}
 };
-const NAV=[['home','🏠','首页'],['bill','💰','记账'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片足迹'],['letter','💌','信箱'],['plan','🎟️','计划'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘']];
+const NAV=[['home','🏠','首页'],['bill','💰','记账'],['goal','🐷','存钱目标'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片足迹'],['letter','💌','信箱'],['plan','🎟️','计划'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘'],['year','🎬','年度回顾']];
 let items={},meta=null,tab='home',col=null,cur={},ready=false,warn='',H0='',uh='',myid='',placing=null,sel=null,ff='全部';
 const rec=t=>Object.entries(items).filter(([k,v])=>v.type===t).map(([k,v])=>({id:k,...v}));
 const dsort=a=>a.sort((x,y)=>(y.date||y.open||'')<(x.date||x.open||'')?-1:1);
@@ -174,6 +174,7 @@ async function loadAll(){
   }
   meta=items.meta||null;warn='';
   if(await loadBills())changed=true;
+   runRecur();
   if(items.cfg&&items.cfg.key){AMAP.key=items.cfg.key;AMAP.sec=items.cfg.sec;try{localStorage.setItem('amcfg',JSON.stringify(items.cfg))}catch(e){}loadAMap()}
   if(items.appicon&&items.appicon.u)applyIcon(items.appicon.u);
  }catch(e){if(authed)warn='读取失败：'+(e.name==='AbortError'?'连接 Supabase 超时，请检查网络':e.message)}
@@ -221,6 +222,8 @@ function view(){
  if(tab==='home')return home();
  if(tab==='tl')return tlView();
  if(tab==='bill')return billView();
+ if(tab==='goal')return goalView();
+ if(tab==='year')return yearView();
  if(tab==='photo')return photoView();
  if(tab==='mood')return moodView();
  if(tab==='plan')return planView();
@@ -243,14 +246,14 @@ function home(){
  let cd=[];
  const st=start();
  const nextAnn=ds=>{const [y,m,d]=ds.split('-').map(Number),t=new Date(td()+'T00:00');let x=new Date(t.getFullYear(),m-1,d);if(x<t)x=new Date(t.getFullYear()+1,m-1,d);return Math.round((x-t)/864e5)};
- cd.push({t:'在一起纪念日',d:nextAnn(st),y:true});
+ cd.push({t:'在一起纪念日',d:nextAnn(st),y:true});if(nx)cd.push({t:'在一起第 '+nx+' 天',d:nx-n});
  rec('event').forEach(v=>{if(!v.date)return;const d=v.yearly?nextAnn(v.date):dd(v.date);if(d>=0)cd.push({t:v.title,d,y:v.yearly})});
  rec('plan').forEach(v=>{if(v.date&&!v.done&&dd(v.date)>=0)cd.push({t:'🎟️ '+v.title,d:dd(v.date)})});
  cd.sort((a,b)=>a.d-b.d);
  const md=td().slice(5),ago=Object.entries(items).filter(([k,v])=>v.date&&v.type&&v.date.slice(5)===md&&v.date<td()).map(([k,v])=>({id:k,...v}));
  const ps=rec('place');
  return `<div class="card static hero"><div class="mut">${esc(who()[0])} ♥ ${esc(who()[1])}</div><div class="big">${n}</div><div>天 · 一起走过</div>${nx?`<p class="mut">距离第 ${nx} 天还有 ${nx-n} 天</p>`:''}</div>
- <div class="card static"><h3>⏳ 倒计时</h3>${cd.slice(0,5).map(c=>`<div class="row"><span>${esc(c.t)} ${c.y?'<span class="tag">每年</span>':''}</span><b style="color:var(--acc)">${c.d===0?'就是今天！':c.d+' 天'}</b></div>`).join('')}</div>
+ <div class="card static"><h3>⏳ 倒计时</h3>${(cdAll?cd:cd.slice(0,5)).map(c=>`<div class="row"><span>${esc(c.t)} ${c.y?'<span class="tag">每年</span>':''}</span><b style="color:var(--acc)">${c.d===0?'就是今天！':c.d+' 天'}</b></div>`).join('')}<p style="margin:8px 0 0;text-align:right">${cd.length>5?`<button class="btn o" onclick="cdAll=!cdAll;render()">${cdAll?'收起':'全部 '+cd.length+' 个'}</button> `:''}<button class="btn o" onclick="openForm('event',null,{pre:{yearly:true}})">＋ 生日/纪念日</button></p></div>
  ${ago.length?`<div class="card static"><h3>🕰️ 那年今日</h3>${ago.map(v=>`<div onclick="openForm('${v.type}','${v.id}')">${T[v.type].i} ${esc(v.date)} ${esc(title(v))}</div>`).join('')}</div>`:''}
  <div class="card static"><h3>🎲 回忆盲盒</h3><div id="box" class="mut">随机抽一段你们的回忆</div><p><button class="btn o" onclick="blind()">抽一张</button></p></div>
  ${moodChart()}
@@ -285,11 +288,11 @@ function render(){
  $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${i} ${n}</button>`).join('');
  $('#ttl').textContent=meta?`${meta.a} & ${meta.b}`:'我们的胶片日记';
  $('#sub').textContent=warn||(meta?'SINCE '+meta.start:'LOVE FILM JOURNAL');
- $('#fab').style.display=meta&&tab!=='home'?'':'none';
+ $('#fab').style.display=meta&&tab!=='home'&&tab!=='year'?'':'none';
  $('#app').innerHTML=pwBanner()+view();mountMap();
 }
 function go(k){tab=k;render();scrollTo(0,0)}
-$('#fab').onclick=()=>{if(tab==='bill'){openBill();return}if(tab==='food'&&AMAP.key){const q=$('#sq');if(q){q.scrollIntoView({block:'center'});q.focus();return}}openForm(tab==='tl'?'event':tab)};
+$('#fab').onclick=()=>{if(tab==='bill'){openBill();return}if(tab==='goal'){goalForm();return}if(tab==='food'&&AMAP.key){const q=$('#sq');if(q){q.scrollIntoView({block:'center'});q.focus();return}}openForm(tab==='tl'?'event':tab)};
 
 function openForm(type,id,pos){
  if(type==='letter'&&id&&!(pos&&pos.edit))return openLetter(id);
@@ -820,16 +823,30 @@ function fightView(){
 const EXP=[['三餐','🍚'],['零食','🍿'],['衣服','👕'],['交通','🚌'],['旅行','🏝️'],['学习','🎓'],['医疗','💊'],['送礼','🎁'],['日用品','🛒'],['住房','🏠'],['美妆','💄'],['话费网费','📱'],['娱乐','🎮'],['宠物','🐾'],['水电煤','💡'],['汽车','🚗'],['数码','📷'],['运动','🏃'],['红包','🧧'],['其它','📦']];
 const INC=[['工资','💰'],['红包','🧧'],['理财','📈'],['退款','🔄'],['其它','✨']];
 const ACC=['微信','支付宝','Apple Pay','银行卡','现金'],COL=['#b5482f','#e0a65a','#3f7d8c','#7d8f4e','#8a5a7d','#c9a227','#6b6b6b'];
-let bd={},bScope='all',bTab='list',bMonth='',bRange='m',bAnchor='';
+let bd={},bScope='all',bTab='list',bMonth='',bRange='m',bAnchor='',bQ='',bCF='',QN=[],recBusy=false,cdAll=false,yrSel='';
 const iso=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const icon=(c,k)=>((k==='收入'?INC:EXP).find(x=>x[0]===c)||['','📦'])[1];
 const wk=d=>'周'+'日一二三四五六'[new Date(d+'T00:00').getDay()];
-const mem=u=>(MEM.find(m=>m.uid===u)||{}).name||'';
-const inScope=b=>!b.pending&&(bScope==='all'?true:bScope==='shared'?!!b.shared:bScope==='me'?(!b.shared&&ME&&b.owner===ME.uid):(!b.shared&&ME&&b.owner!==ME.uid));
+const bn=u=>(MEM.find(m=>m.uid===u)||{}).name||'TA';
+const inScope=b=>bScope==='all'||(bScope==='shared'?!!b.shared:(!b.shared&&(bScope==='me'?(ME&&b.owner===ME.uid):(ME&&b.owner!==ME.uid))));
 const sum=(l,k)=>l.filter(b=>b.kind===k).reduce((t,b)=>t+Number(b.amt),0);
+const mAdd=(m,n)=>{const [y,k]=m.split('-').map(Number),d=new Date(y,k-1+n,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
+function uid5(s){let a=[2166136261,2654435761,1597334677,3812015801];for(let i=0;i<s.length;i++)a=a.map((x,j)=>Math.imul(x^(s.charCodeAt(i)+j*31),16777619)>>>0);const h=a.map(x=>x.toString(16).padStart(8,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20,32)}
+const showDlg=h=>{$('#dlg').innerHTML=h;if(!$('#dlg').open)$('#dlg').showModal()};
 async function loadBills(){
- try{const r=(await rest('bills?select=*&order=dt.desc,created_at.desc&limit=3000'))||[],sg=JSON.stringify(r.map(b=>[b.id,b.kind,b.owner,b.amt,b.cat,b.dt,b.note,b.acct,b.shared,b.pending,b.merchant]));
+ try{const r=(await rest('bills?select=*&order=dt.desc,created_at.desc&limit=5000'))||[],sg=JSON.stringify(r.map(b=>[b.id,b.kind,b.owner,b.amt,b.cat,b.dt,b.note,b.acct,b.shared]));
   if(sg===bSig)return false;bills=r;bSig=sg;return true}catch(e){return false}
+}
+async function runRecur(){
+ const R=items.recur;if(recBusy||!ME||!R||!(R.list||[]).length)return;recBusy=true;
+ try{let ch=false;const nowM=td().slice(0,7);
+  for(const r of R.list){let m=mAdd(r.last||mAdd(r.start,-1),1),rows=[],last=r.last;
+   while(m<=nowM){const dim=new Date(+m.slice(0,4),+m.slice(5),0).getDate(),dt=m+'-'+String(Math.min(r.day,dim)).padStart(2,'0');if(dt>td())break;
+    rows.push({id:uid5(r.id+m),owner:r.payer||ME.uid,kind:r.kind,amt:r.amt,cat:r.cat,note:r.name,acct:r.acct||'',dt,shared:!!r.shared});last=m;m=mAdd(m,1)}
+   if(rows.length){await rest('bills?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates'},body:JSON.stringify(rows)});r.last=last;ch=true}}
+  if(ch){await save('recur',{...R});bSig='';await loadBills();render()}
+ }catch(e){}
+ recBusy=false;
 }
 function handleUrl(){
  if(!urlAdd)return;const u=urlAdd;urlAdd=null;try{history.replaceState(null,'',location.pathname)}catch(e){}
@@ -837,18 +854,21 @@ function handleUrl(){
 }
 function openBill(id,pre){
  const b=id?bills.find(x=>x.id===id):null;
- const defOwner=(bScope==='ta'&&MEM.find(m=>ME&&m.uid!==ME.uid)?MEM.find(m=>ME&&m.uid!==ME.uid).uid:(ME&&ME.uid))||'';
- bd=b?{id:b.id,kind:b.kind,cat:b.cat,amt:String(b.amt),note:b.note||b.merchant||'',acct:b.acct||'',dt:b.dt,shared:!!b.shared,owner:b.owner||defOwner}:{id:null,kind:'支出',cat:'',amt:'',note:'',acct:'',dt:td(),shared:bScope==='shared',owner:defOwner,...(pre||{})};
+ bd=b?{id:b.id,kind:b.kind,cat:b.cat,amt:String(b.amt),note:b.note||'',acct:b.acct||'',dt:b.dt,shared:!!b.shared,owner:b.owner}:{id:null,kind:'支出',cat:'',amt:'',note:'',acct:'',dt:td(),shared:false,owner:ME&&ME.uid,...(pre||{})};
  drawSheet();$('#dlg').showModal();
 }
+function qnList(){const m={};bills.filter(b=>b.kind===bd.kind&&b.note).forEach(b=>{const k=b.note+'|'+b.cat,x=m[k]||(m[k]={note:b.note,cat:b.cat,acct:b.acct,n:0});x.n++});return Object.values(m).sort((a,b)=>b.n-a.n).slice(0,8)}
+function qn(i){const x=QN[i];if(!x)return;bd.note=x.note;bd.cat=x.cat;if(!bd.acct)bd.acct=x.acct;drawSheet()}
 function drawSheet(){
  const v=bd,L=v.kind==='收入'?INC:EXP,ks=['1','2','3','⌫','4','5','6','C','7','8','9','再记','.','0','00','保存'];
+ QN=v.id?[]:qnList();
  $('#dlg').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn o" onclick="$('#dlg').close()">✕</button><div style="display:flex;gap:6px">${['支出','收入'].map(k=>`<button class="btn ${v.kind===k?'':'o'}" onclick="bd.kind='${k}';bd.cat='';drawSheet()">${k}</button>`).join('')}</div><span style="width:44px"></span></div>
  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:10px 0;text-align:center">${L.map(([n,i])=>`<div onclick="bd.cat='${n}';drawSheet()" style="cursor:pointer;padding:5px 0;border-radius:8px;${v.cat===n?'background:var(--acc);color:#fff':''}"><div style="font-size:24px">${i}</div><div style="font-size:11px">${n}</div></div>`).join('')}</div>
- <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><select onchange="bd.acct=this.value" style="width:auto">${['',...ACC].map(a=>`<option value="${a}" ${a===v.acct?'selected':''}>${a||'选择账户'}</option>`).join('')}</select><input type="date" value="${v.dt}" onchange="bd.dt=this.value" style="width:auto"><label style="margin:0;display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--ink);cursor:pointer"><input type="checkbox" ${v.shared?'checked':''} onchange="bd.shared=this.checked">💑 共同账单</label>${MEM.length>1?`<select onchange="bd.owner=this.value" style="width:auto">${MEM.map(m=>`<option value="${m.uid}" ${m.uid===v.owner?'selected':''}>归属：${esc(m.name)}</option>`).join('')}</select>`:''}</div>
+ ${QN.length?`<div style="display:flex;gap:6px;overflow-x:auto;margin:0 0 8px">${QN.map((x,i)=>`<button class="btn o" style="flex:none;padding:3px 9px;font-size:12px" onclick="qn(${i})">${esc(x.note)}</button>`).join('')}</div>`:''}
+ <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><select onchange="bd.acct=this.value" style="width:auto">${['',...ACC].map(a=>`<option value="${a}" ${a===v.acct?'selected':''}>${a||'选择账户'}</option>`).join('')}</select><input type="date" value="${v.dt}" onchange="bd.dt=this.value" style="width:auto"><label style="margin:0;display:flex;align-items:center;gap:4px;color:var(--ink)"><input type="checkbox" ${v.shared?'checked':''} onchange="bd.shared=this.checked;drawSheet()"> 共同</label>${v.shared?`<select onchange="bd.owner=this.value" style="width:auto">${MEM.map(m=>`<option value="${m.uid}" ${m.uid===v.owner?'selected':''}>${esc(m.name)} 付</option>`).join('')}</select>`:''}</div>
  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input placeholder="点此输入备注…" value="${esc(v.note)}" oninput="bd.note=this.value"><b id="bamt" style="font-size:26px;color:var(--acc);min-width:100px;text-align:right">${v.amt||'0.00'}</b></div>
  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${ks.map(k=>`<button class="btn ${'保存'===k?'':'o'}" style="padding:12px 0;font-size:18px" onclick="key('${k}')">${k}</button>`).join('')}</div>
- ${v.id?'<p style="text-align:right"><button class="btn o" onclick="delBill()">删除这笔</button></p>':''}`;
+ ${v.id?`<p class="mut">记录人：${esc(bn(v.owner))}（你们两人都可以修改或删除）</p><p style="text-align:right"><button class="btn o" onclick="delBill()">删除这笔</button></p>`:''}`;
 }
 function key(k){
  if(k==='保存')return saveBill(false);if(k==='再记')return saveBill(true);
@@ -860,68 +880,148 @@ function key(k){
 async function saveBill(again){
  const v=bd,amt=parseFloat(v.amt);
  if(!(amt>0)){toast('请输入金额');return}if(!v.cat){toast('请选择分类');return}
- const row={kind:v.kind,amt,cat:v.cat,note:v.note||'',acct:v.acct||'',dt:v.dt||td(),shared:!!v.shared,pending:false};
- if(v.owner)row.owner=v.owner;
+ const row={kind:v.kind,amt,cat:v.cat,note:v.note||'',acct:v.acct||'',dt:v.dt||td(),shared:!!v.shared,owner:v.owner||(ME&&ME.uid)};
  try{if(v.id)await rest('bills?id=eq.'+v.id,{method:'PATCH',body:JSON.stringify(row)});else await rest('bills',{method:'POST',body:JSON.stringify(row)})}
  catch(e){toast('保存失败：'+e.message);return}
- await loadBills();
+ bSig='';await loadBills();
  if(again){bd={...bd,id:null,amt:'',note:''};drawSheet()}else{$('#dlg').close()}
  render();
 }
-async function delBill(){if(!confirm('确定删除这笔吗？'))return;try{await rest('bills?id=eq.'+bd.id,{method:'DELETE'})}catch(e){toast('删除失败');return}$('#dlg').close();await loadBills();bSig='';await loadBills();render()}
+async function delBill(){if(!confirm('确定删除这笔吗？'))return;try{await rest('bills?id=eq.'+bd.id,{method:'DELETE'})}catch(e){toast('删除失败');return}$('#dlg').close();bSig='';await loadBills();render()}
 const setScope=k=>{bScope=k;render()},setBTab=k=>{bTab=k;render()},setRange=k=>{bRange=k;render()};
-function shiftBM(n){const [Y,M]=bMonth.split('-').map(Number),d=new Date(Y,M-1+n,1);bMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');render()}
-function shiftA(n){const d=new Date(bAnchor+'T00:00');if(bRange==='d')d.setDate(d.getDate()+n);else if(bRange==='w')d.setDate(d.getDate()+7*n);else d.setMonth(d.getMonth()+n,1);bAnchor=iso(d);render()}
+function setQ(v){bQ=v;const e=$('#blist');if(e)e.innerHTML=listHTML()}
+function setCF(v){bCF=v;const e=$('#blist');if(e)e.innerHTML=listHTML()}
+function shiftBM(n){bMonth=mAdd(bMonth,n);render()}
+function shiftA(n){const d=new Date(bAnchor+'T00:00');if(bRange==='d')d.setDate(d.getDate()+n);else if(bRange==='w')d.setDate(d.getDate()+7*n);else if(bRange==='y')d.setFullYear(d.getFullYear()+n,0,1);else d.setMonth(d.getMonth()+n,1);bAnchor=iso(d);render()}
 function rangeOf(r,a){const d=new Date(a+'T00:00');if(r==='d')return [a,a];
+ if(r==='y')return [a.slice(0,4)+'-01-01',a.slice(0,4)+'-12-31'];
  if(r==='w'){const s=new Date(d);s.setDate(d.getDate()-(d.getDay()+6)%7);const e=new Date(s);e.setDate(s.getDate()+6);return [iso(s),iso(e)]}
  return [a.slice(0,8)+'01',iso(new Date(d.getFullYear(),d.getMonth()+1,0))]}
 function billRow(b){
- const sub=[b.merchant,b.note,b.acct].filter(Boolean).join(' · ');
- return `<div class="card" onclick="openBill('${b.id}')" style="display:flex;gap:10px;align-items:center;padding:10px 12px;margin-bottom:8px"><span style="font-size:24px">${icon(b.cat,b.kind)}</span><div style="flex:1;min-width:0"><b>${esc(b.cat||'未分类')}</b> <span class="tag" style="${b.shared?'border-color:var(--acc);color:var(--acc)':''}">${b.shared?'💑 共同':'个人'}</span><span class="tag">${esc(mem(b.owner)||'TA')}</span><div class="mut">${esc(sub)}</div></div><b style="color:${b.kind==='收入'?'#3f7d8c':'var(--acc)'}">${b.kind==='收入'?'+':'-'}${Number(b.amt).toFixed(2)}</b></div>`;
+ return `<div class="card" onclick="openBill('${b.id}')" style="display:flex;gap:10px;align-items:center;padding:10px 12px;margin-bottom:8px"><span style="font-size:24px">${icon(b.cat,b.kind)}</span><div style="flex:1;min-width:0"><b>${esc(b.cat||'未分类')}</b> <span class="tag">${b.shared?'共同 · '+esc(bn(b.owner))+'付':esc(bn(b.owner))}</span><div class="mut">${esc(b.note||'')} ${esc(b.acct||'')}</div></div><b style="color:${b.kind==='收入'?'#3f7d8c':'var(--acc)'}">${b.kind==='收入'?'+':'-'}${Number(b.amt).toFixed(2)}</b></div>`;
 }
 function donut(parts){
  const T=parts.reduce((t,p)=>t+p.v,0);if(!T)return '';let a=-Math.PI/2,h='';
  parts.forEach(p=>{const f=p.v/T;if(f>.999){h+=`<circle cx="60" cy="60" r="50" fill="none" stroke="${p.c}" stroke-width="18"/>`;return}const b=a+f*2*Math.PI;h+=`<path d="M${60+50*Math.cos(a)},${60+50*Math.sin(a)}A50,50 0 ${f>.5?1:0} 1 ${60+50*Math.cos(b)},${60+50*Math.sin(b)}" fill="none" stroke="${p.c}" stroke-width="18"/>`;a=b});
  return `<svg viewBox="0 0 120 120" width="130">${h}<text x="60" y="65" text-anchor="middle" font-size="13" style="fill:var(--ink)">¥${T.toFixed(0)}</text></svg>`;
 }
-async function genKey(){
- try{const k=await rest('rpc/make_shortcut_key',{method:'POST',body:'{}'});
-  const box=$('#sckey');if(box)box.innerHTML=`<div class="mut" style="margin:6px 0">你的专属密钥（点下方按钮复制，勿截图外传）：</div><input readonly value="${esc(k)}" onclick="this.select()"><p><button class="btn" onclick="navigator.clipboard.writeText('${esc(k)}');toast('已复制密钥')">复制密钥</button></p>`}
- catch(e){toast('生成失败：'+e.message)}
+const pbar=(s,t)=>{const p=t>0?s/t*100:0,c=p>=100?'#b5482f':p>=80?'#e0a65a':'#7d8f4e';return `<div style="height:8px;border:1px solid var(--ink);border-radius:4px;overflow:hidden;margin:3px 0"><div style="height:100%;width:${Math.min(100,p)}%;background:${c}"></div></div>`};
+function budgetCard(){
+ const B=items.budget,ex=bills.filter(b=>b.kind==='支出'&&b.dt.startsWith(bMonth));
+ if(!B||!(B.total>0||Object.keys(B.cats||{}).length))return `<p style="text-align:center"><button class="btn o" onclick="openBudget()">🎯 设置月预算</button></p>`;
+ const tot=sum(ex,'支出');let h=`<div class="card static"><div class="row"><h3>🎯 本月预算</h3><button class="btn o" onclick="openBudget()">修改</button></div>`;
+ if(B.total>0)h+=`<div class="row"><span>总支出 ¥${tot.toFixed(0)} / ¥${B.total}</span><b style="color:${tot>B.total?'#b5482f':'var(--ink)'}">${tot>B.total?'超 ¥'+(tot-B.total).toFixed(0):'剩 ¥'+(B.total-tot).toFixed(0)}</b></div>${pbar(tot,B.total)}`;
+ Object.entries(B.cats||{}).forEach(([c,v])=>{const s=sum(ex.filter(b=>b.cat===c),'支出');h+=`<div class="row mut" style="margin-top:4px"><span>${icon(c,'支出')} ${esc(c)} ¥${s.toFixed(0)} / ¥${v}</span><span>${s>v?'超 ¥'+(s-v).toFixed(0):'剩 ¥'+(v-s).toFixed(0)}</span></div>${pbar(s,v)}`});
+ return h+'</div>';
 }
-function scSetup(){
- const u=location.origin+location.pathname;
- $('#dlg').innerHTML=`<h3>⚙︎ 付款后自动记账</h3><p class="mut">在 iPhone“快捷指令 → 自动化 → 钱包（交易）”里可配置付款后自动跳出或静默记账：</p><div class="card static"><b>方式一：弹窗选分类（最简单）</b><div class="mut" style="margin-top:4px">自动化里用“打开 URL”，填入：<br>${esc(u)}?add=1&amp;src=applepay&amp;amt=金额&amp;m=商户</div></div><div class="card static"><b>方式二：静默记入“待分类”</b><div class="mut" style="margin-top:4px">接口地址：${esc(CFG.url)}/rest/v1/rpc/quick_add<br>请求头 apikey：${esc(CFG.key)}</div><div id="sckey" style="margin-top:8px"><button class="btn o" onclick="genKey()">生成/重置我的快捷指令密钥</button></div></div><p style="text-align:right"><button class="btn" onclick="$('#dlg').close()">关闭</button></p>`;
- $('#dlg').showModal();
+function openBudget(){const B=items.budget||{};showDlg(`<h3>🎯 月预算</h3><p class="mut">留空表示不设，总预算和分类预算可以只设一部分。</p><label>每月总预算（元）</label><input id="bt" type="number" inputmode="decimal" value="${B.total||''}">${EXP.map(([n,i])=>`<label>${i} ${n}</label><input class="bc" data-c="${n}" type="number" inputmode="decimal" value="${(B.cats||{})[n]||''}">`).join('')}<p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">取消</button> <button class="btn" onclick="saveBudget()">保存</button></p>`)}
+function saveBudget(){const cats={};document.querySelectorAll('#dlg .bc').forEach(e=>{const v=parseFloat(e.value);if(v>0)cats[e.dataset.c]=v});save('budget',{type:'budget',total:parseFloat($('#bt').value)||0,cats});$('#dlg').close()}
+function settleCard(){
+ const sh=bills.filter(b=>b.shared&&b.kind==='支出'&&b.dt.startsWith(bMonth)),ids=MEM.map(m=>m.uid);
+ if(!sh.length||ids.length<2)return '';
+ const pa=ids.map(u=>sum(sh.filter(b=>b.owner===u),'支出')),d=(pa[0]-pa[1])/2;
+ return `<div class="card static"><h3>🤝 本月共同支出</h3><div class="row"><span>共 ¥${(pa[0]+pa[1]).toFixed(2)}</span><span class="mut">${esc(bn(ids[0]))}付 ¥${pa[0].toFixed(2)} · ${esc(bn(ids[1]))}付 ¥${pa[1].toFixed(2)}</span></div><div style="margin-top:4px;color:var(--acc)">${Math.abs(d)<.005?'刚好平摊 👌':`按各付一半算：${esc(bn(ids[d>0?1:0]))} 还需转给 ${esc(bn(ids[d>0?0:1]))} ¥${Math.abs(d).toFixed(2)}`}</div></div>`;
+}
+function listHTML(){
+ const ok=bills.filter(inScope),q=bQ.trim().toLowerCase(),sr=!!(q||bCF);
+ const ml=sr?ok.filter(b=>(!bCF||b.cat===bCF)&&(!q||(b.note+b.cat+b.acct+bn(b.owner)).toLowerCase().includes(q))):ok.filter(b=>b.dt.startsWith(bMonth));
+ const e=sum(ml,'支出'),i=sum(ml,'收入'),days={},[Y,M]=bMonth.split('-');
+ ml.forEach(b=>(days[b.dt]=days[b.dt]||[]).push(b));
+ const stat=`<div style="display:flex;justify-content:space-around;text-align:center;margin-top:8px"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${e.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${i.toFixed(2)}</b></div><div class="mut">结余<br><b style="font-size:18px">${(i-e).toFixed(2)}</b></div></div>`;
+ return (sr?`<div class="card static"><b>🔍 搜索结果 ${ml.length} 笔</b>${stat}</div>`:`<div class="card static"><div class="row" style="align-items:center"><button class="btn o" onclick="shiftBM(-1)">‹</button><b>${Y}年${+M}月</b><button class="btn o" onclick="shiftBM(1)">›</button></div>${stat}</div>${budgetCard()}${settleCard()}`)
+  +(ml.length?Object.keys(days).sort().reverse().map(d=>`<div class="row mut" style="margin:12px 0 6px"><span>${sr?d:d.slice(5)} ${wk(d)}</span><span>${sum(days[d],'支出')?'支出 '+sum(days[d],'支出').toFixed(2):''}${sum(days[d],'收入')?'　收入 '+sum(days[d],'收入').toFixed(2):''}</span></div>`+days[d].map(billRow).join('')).join(''):`<p class="mut" style="text-align:center;padding:30px 0">${sr?'没有找到':'这个月还没有记录，点右下角 + 记一笔'}</p>`);
 }
 function billView(){
  if(!ME)return empty();
  if(!bMonth)bMonth=td().slice(0,7);if(!bAnchor)bAnchor=td();
- const pendB=bills.filter(b=>b.pending);
- const pBan=pendB.length?`<div class="card static" style="border-color:var(--acc)"><b>🔔 ${pendB.length} 笔付款待分类（点此补充分类）</b>${pendB.map(b=>`<div class="row" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);cursor:pointer" onclick="openBill('${b.id}')"><span>${esc(b.dt.slice(5))} · ${esc(b.merchant||b.note||'待补充')} ${esc(b.acct||'')} <span class="tag">${esc(mem(b.owner)||'TA')}</span></span><b style="color:var(--acc)">-¥${Number(b.amt).toFixed(2)} ›</b></div>`).join('')}</div>`:'';
  const ok=bills.filter(inScope);
- const seg=(cur,o,fn)=>`<div style="display:flex;gap:5px;flex-wrap:wrap">${o.map(([k,n])=>`<button class="btn ${cur===k?'':'o'}" style="padding:6px 10px;font-size:13px" onclick="${fn}('${k}')">${n}</button>`).join('')}</div>`;
- const head=pBan+`<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap">${seg(bScope,[['all','全部'],['shared','💑 共同'],['me','我的个人'],['ta','TA的个人']],'setScope')}${seg(bTab,[['list','明细'],['stat','统计']],'setBTab')}</div>`;
- const foot=`<p style="text-align:center;margin-top:16px"><button class="btn o" onclick="scSetup()">⚙︎ 付款后自动记账</button></p>`;
+ const seg=(cur,o,fn)=>`<div style="display:flex;gap:6px">${o.map(([k,n])=>`<button class="btn ${cur===k?'':'o'}" onclick="${fn}('${k}')">${n}</button>`).join('')}</div>`;
+ const head=`<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap">${seg(bScope,[['all','全部'],['shared','共同'],['me','我的'],['ta','TA的']],'setScope')}${seg(bTab,[['list','明细'],['stat','统计']],'setBTab')}</div>`;
  if(bTab==='list'){
-  const ml=ok.filter(b=>b.dt.startsWith(bMonth)),e=sum(ml,'支出'),i=sum(ml,'收入'),days={};
-  ml.forEach(b=>(days[b.dt]=days[b.dt]||[]).push(b));
-  const [Y,M]=bMonth.split('-');
-  return head+`<div class="card static"><div class="row" style="align-items:center"><button class="btn o" onclick="shiftBM(-1)">‹</button><b>${Y}年${+M}月</b><button class="btn o" onclick="shiftBM(1)">›</button></div><div style="display:flex;justify-content:space-around;text-align:center;margin-top:8px"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${e.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${i.toFixed(2)}</b></div><div class="mut">结余<br><b style="font-size:18px">${(i-e).toFixed(2)}</b></div></div></div>`
-   +(ml.length?Object.keys(days).sort().reverse().map(d=>`<div class="row mut" style="margin:12px 0 6px"><span>${d.slice(5)} ${wk(d)}</span><span>${sum(days[d],'支出')?'支出 '+sum(days[d],'支出').toFixed(2):''}${sum(days[d],'收入')?'　收入 '+sum(days[d],'收入').toFixed(2):''}</span></div>`+days[d].map(billRow).join('')).join(''):'<p class="mut" style="text-align:center;padding:30px 0">这个月还没有记录，点右下角 + 记一笔</p>')+foot;
+  const cats=[...new Set([...EXP,...INC].map(x=>x[0]))];
+  return head+`<div style="display:flex;gap:6px;margin-bottom:10px"><input id="bq" placeholder="🔍 搜备注/分类/账户" value="${esc(bQ)}" oninput="setQ(this.value)"><select style="width:auto" onchange="setCF(this.value)"><option value="">全部分类</option>${cats.map(c=>`<option ${bCF===c?'selected':''}>${c}</option>`).join('')}</select></div><div id="blist">${listHTML()}</div><p style="text-align:center"><button class="btn o" onclick="openRecur()">🔁 固定账单</button> <button class="btn o" onclick="exportCsv()">⬇︎ 导出CSV</button></p><p class="mut" style="text-align:center">“我的/TA的”指个人账单，“共同”指我们一起花的；两个人都能看、能改、能删。</p>`;
  }
  const [s,e]=rangeOf(bRange,bAnchor),sl=ok.filter(b=>b.dt>=s&&b.dt<=e),ex=sl.filter(b=>b.kind==='支出'),te=sum(sl,'支出'),ti=sum(sl,'收入');
- const days=[];for(let d=new Date(s+'T00:00');iso(d)<=e;d.setDate(d.getDate()+1))days.push(iso(d));
- const per=days.map(d=>ex.filter(b=>b.dt===d).reduce((t,b)=>t+Number(b.amt),0)),mx=Math.max(1,...per);
- const bars=days.length>1?`<svg viewBox="0 0 300 110" width="100%">${per.map((v,k)=>{const w=300/days.length,h=v/mx*80;return `<rect x="${k*w+w*.15}" y="${90-h}" width="${w*.7}" height="${Math.max(h,v?2:0)}" rx="2" fill="var(--acc)"/>`+((days.length<=8||k%5===0)?`<text x="${k*w+w/2}" y="104" text-anchor="middle" font-size="8" style="fill:var(--mut)">${days[k].slice(8)}</text>`:'')}).join('')}</svg>`:'';
+ let lab=[],per=[],n;
+ if(bRange==='y'){const Y=s.slice(0,4);for(let k=1;k<=12;k++){const m=Y+'-'+String(k).padStart(2,'0');lab.push(k);per.push(sum(ex.filter(b=>b.dt.startsWith(m)),'支出'))}n=Y===td().slice(0,4)?+td().slice(5,7):12}
+ else{for(let d=new Date(s+'T00:00');iso(d)<=e;d.setDate(d.getDate()+1)){const x=iso(d);lab.push(x.slice(8));per.push(sum(ex.filter(b=>b.dt===x),'支出'))}n=lab.length}
+ const mx=Math.max(1,...per);
+ const bars=lab.length>1?`<svg viewBox="0 0 300 110" width="100%">${per.map((v,k)=>{const w=300/lab.length,h=v/mx*80;return `<rect x="${k*w+w*.15}" y="${90-h}" width="${w*.7}" height="${Math.max(h,v?2:0)}" rx="2" fill="var(--acc)"/>`+((lab.length<=12||k%5===0)?`<text x="${k*w+w/2}" y="104" text-anchor="middle" font-size="8" style="fill:var(--mut)">${lab[k]}</text>`:'')}).join('')}</svg>`:'';
  const cat={};ex.forEach(b=>cat[b.cat||'其它']=(cat[b.cat||'其它']||0)+Number(b.amt));
  let parts=Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([n,v])=>({n,v}));
  if(parts.length>6){const o=parts.slice(6).reduce((t,p)=>t+p.v,0);parts=parts.slice(0,6).concat([{n:'其它',v:o}])}
  parts.forEach((p,k)=>p.c=COL[k%COL.length]);
- const lbl=bRange==='d'?s:bRange==='w'?s.slice(5)+' ~ '+e.slice(5):s.slice(0,7),n=days.length;
- return head+`<div class="card static"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">${seg(bRange,[['d','日'],['w','周'],['m','月']],'setRange')}<span><button class="btn o" onclick="shiftA(-1)">‹</button> <b>${lbl}</b> <button class="btn o" onclick="shiftA(1)">›</button></span></div>
- <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${te.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${ti.toFixed(2)}</b></div><div class="mut">日均支出<br><b style="font-size:18px">${(te/n).toFixed(2)}</b></div></div>${bars}</div>
- ${parts.length?`<div class="card static"><h3>支出构成</h3><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${donut(parts)}<div style="flex:1;min-width:140px">${parts.map(p=>`<div class="row" style="margin:3px 0"><span><span style="color:${p.c}">●</span> ${icon(p.n,'支出')} ${esc(p.n)}</span><span>${p.v.toFixed(2)} <span class="mut">${(p.v/te*100).toFixed(0)}%</span></span></div>`).join('')}</div></div></div>`:'<p class="mut" style="text-align:center;padding:30px 0">这段时间没有支出记录</p>'}`+foot;
+ const lbl=bRange==='d'?s:bRange==='w'?s.slice(5)+' ~ '+e.slice(5):bRange==='y'?s.slice(0,4)+'年':s.slice(0,7);
+ return head+`<div class="card static"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">${seg(bRange,[['d','日'],['w','周'],['m','月'],['y','年']],'setRange')}<span><button class="btn o" onclick="shiftA(-1)">‹</button> <b>${lbl}</b> <button class="btn o" onclick="shiftA(1)">›</button></span></div>
+ <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${te.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${ti.toFixed(2)}</b></div><div class="mut">${bRange==='y'?'月':'日'}均支出<br><b style="font-size:18px">${(te/n).toFixed(2)}</b></div></div>${bars}</div>
+ ${parts.length?`<div class="card static"><h3>支出构成</h3><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${donut(parts)}<div style="flex:1;min-width:140px">${parts.map(p=>`<div class="row" style="margin:3px 0"><span><span style="color:${p.c}">●</span> ${icon(p.n,'支出')} ${esc(p.n)}</span><span>${p.v.toFixed(2)} <span class="mut">${(p.v/te*100).toFixed(0)}%</span></span></div>`).join('')}</div></div></div>`:'<p class="mut" style="text-align:center;padding:30px 0">这段时间没有支出记录</p>'}`;
+}
+function exportCsv(){
+ const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',rows=[['日期','类型','分类','金额','备注','账户','性质','记录/付款人']].concat(bills.slice().sort((a,b)=>a.dt<b.dt?-1:1).map(b=>[b.dt,b.kind,b.cat,b.amt,b.note,b.acct,b.shared?'共同':'个人',bn(b.owner)]));
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='bills-'+td()+'.csv';a.click();
+}
+function rcCats(){$('#rc').innerHTML=($('#rk').value==='收入'?INC:EXP).map(([n])=>`<option>${n}</option>`).join('')}
+function openRecur(){
+ const L=(items.recur||{}).list||[];
+ showDlg(`<h3>🔁 固定账单</h3><p class="mut">每月到号自动记一笔（打开网页时补记，两人同时打开也不会重复）。删除规则不会删除已记的账。</p>${L.map(r=>`<div class="row" style="margin:6px 0"><span>${icon(r.cat,r.kind)} ${esc(r.name)} ¥${r.amt} · 每月${r.day}号 ${r.shared?'<span class="tag">共同</span>':''}</span><button class="btn o" onclick="delRecur('${r.id}')">删</button></div>`).join('')||'<p class="mut">还没有规则</p>'}<hr style="border:0;border-top:1px dashed var(--line)"><label>名称（如 房租、视频会员）</label><input id="rn"><label>金额</label><input id="ra" type="number" inputmode="decimal"><label>类型</label><select id="rk" onchange="rcCats()"><option>支出</option><option>收入</option></select><label>分类</label><select id="rc"></select><label>每月几号（月底不足自动取最后一天）</label><input id="rd" type="number" min="1" max="31" value="1"><label>账户</label><select id="rac">${['',...ACC].map(a=>`<option>${a}</option>`).join('')}</select><label><input type="checkbox" id="rs"> 共同账单</label><label>谁付</label><select id="rp">${MEM.map(m=>`<option value="${m.uid}" ${ME&&m.uid===ME.uid?'selected':''}>${esc(m.name)}</option>`).join('')}</select><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button> <button class="btn" onclick="addRecur()">添加规则</button></p>`);rcCats();
+}
+async function addRecur(){
+ const name=$('#rn').value.trim(),amt=parseFloat($('#ra').value),day=Math.min(31,Math.max(1,parseInt($('#rd').value)||1));
+ if(!name||!(amt>0)){toast('请填写名称和金额');return}
+ const L=((items.recur||{}).list||[]).concat([{id:'r'+Date.now().toString(36),name,amt,kind:$('#rk').value,cat:$('#rc').value,day,acct:$('#rac').value,shared:$('#rs').checked,payer:$('#rp').value,start:td().slice(0,7)}]);
+ await save('recur',{type:'recur',list:L});await runRecur();openRecur();
+}
+async function delRecur(id){if(!confirm('删除这条规则？已记的账不受影响'))return;await save('recur',{type:'recur',list:((items.recur||{}).list||[]).filter(r=>r.id!==id)});openRecur()}
+/* ===== 存钱目标 ===== */
+const gsum=id=>rec('dep').filter(d=>d.goal===id).reduce((t,d)=>t+Number(d.amt),0);
+function goalView(){
+ const gs=rec('goal');
+ if(!gs.length)return '<p class="mut" style="text-align:center;padding:40px 0">还没有存钱目标，点右下角 + 立一个，比如“旅行基金”</p>';
+ return gs.map(g=>{const s=gsum(g.id),p=Math.max(0,Math.min(100,s/g.target*100));return `<div class="card" onclick="openGoal('${g.id}')"><div class="row"><h3>${esc(g.emoji||'🐷')} ${esc(g.name)}</h3><b style="color:var(--acc)">${p.toFixed(0)}%</b></div>${pbar(100-p,100).replace(/#b5482f|#e0a65a/g,'#7d8f4e').replace(/width:\d+(\.\d+)?%/,'width:'+p+'%')}<div class="row mut"><span>已存 ¥${s.toFixed(2)} / ¥${Number(g.target).toFixed(0)}</span><span>${s>=g.target?'🎉 已达成':g.due?'还有 '+Math.max(0,dd(g.due))+' 天':''}</span></div></div>`}).join('');
+}
+function goalForm(id){
+ const g=id?items[id]:{};
+ showDlg(`<h3>🐷 ${id?'编辑':'新建'}存钱目标</h3><label>名称</label><input id="gn" value="${esc(g.name||'')}"><label>图标（一个 emoji）</label><input id="ge" value="${esc(g.emoji||'🐷')}"><label>目标金额（元）</label><input id="gt" type="number" inputmode="decimal" value="${g.target||''}"><label>目标日期（可空）</label><input id="gd" type="date" value="${esc(g.due||'')}"><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">取消</button> <button class="btn" onclick="saveGoal('${id||''}')">保存</button></p>`);
+}
+function saveGoal(id){
+ const name=$('#gn').value.trim(),target=parseFloat($('#gt').value);
+ if(!name||!(target>0)){toast('请填写名称和目标金额');return}
+ save(id||'g'+Date.now().toString(36),{type:'goal',name,emoji:$('#ge').value||'🐷',target,due:$('#gd').value,by:(ME&&ME.name)||''});
+ $('#dlg').close();
+}
+function openGoal(id){
+ const g=items[id];if(!g)return;const ds=rec('dep').filter(d=>d.goal===id).sort((a,b)=>a.dt<b.dt?1:-1),s=gsum(id),left=g.target-s,by={};
+ ds.forEach(d=>by[d.by]=(by[d.by]||0)+Number(d.amt));
+ let hint='';if(left<=0)hint='🎉 目标达成！';else if(g.due&&dd(g.due)>0){const mo=Math.max(1,dd(g.due)/30);hint=`还差 ¥${left.toFixed(0)}，到目标日约每月存 ¥${(left/mo).toFixed(0)}`}else hint=`还差 ¥${left.toFixed(0)}`;
+ showDlg(`<h3>${esc(g.emoji||'🐷')} ${esc(g.name)}</h3><div class="row"><b style="color:var(--acc);font-size:22px">¥${s.toFixed(2)}</b><span class="mut">目标 ¥${Number(g.target).toFixed(0)}</span></div>${pbar(Math.max(0,s),g.target)}<div class="mut">${hint}</div><div class="mut">${Object.entries(by).map(([k,v])=>esc(k)+' 存了 ¥'+v.toFixed(0)).join(' · ')}</div>
+ <label>金额（元）</label><input id="da" type="number" inputmode="decimal"><label>备注（可空）</label><input id="dn"><p><button class="btn" onclick="addDep('${id}',1)">存入</button> <button class="btn o" onclick="addDep('${id}',-1)">取出</button></p>
+ ${ds.map(d=>`<div class="row mut" style="margin:4px 0"><span>${esc(d.dt)} ${esc(d.by||'')} ${esc(d.note||'')}</span><span><b style="color:${d.amt>=0?'#7d8f4e':'var(--acc)'}">${d.amt>=0?'+':''}${Number(d.amt).toFixed(2)}</b> <a href="#" onclick="delDep('${d.id}','${id}');return false" style="color:var(--mut)">删</a></span></div>`).join('')}
+ <p style="display:flex;justify-content:space-between"><span><button class="btn o" onclick="goalForm('${id}')">编辑目标</button> <button class="btn o" onclick="delGoal('${id}')">删除目标</button></span><button class="btn o" onclick="$('#dlg').close()">关闭</button></p>`);
+}
+async function addDep(id,sg){const a=parseFloat($('#da').value);if(!(a>0)){toast('请输入金额');return}
+ await save('d'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),{type:'dep',goal:id,amt:a*sg,dt:td(),by:(ME&&ME.name)||'',note:$('#dn').value.trim()});openGoal(id)}
+async function delDep(d,id){if(!confirm('删除这条存取记录？'))return;await del(d);openGoal(id)}
+async function delGoal(id){if(!confirm('删除这个目标和它的全部存取记录？'))return;for(const d of rec('dep').filter(d=>d.goal===id))await del(d.id);await del(id);$('#dlg').close()}
+/* ===== 年度回顾 ===== */
+function yearView(){
+ if(!yrSel)yrSel=td().slice(0,4);const Y=yrSel,iy=d=>d&&String(d).startsWith(Y);
+ const yrs=[...new Set([td().slice(0,4),...Object.values(items).map(v=>v&&v.date&&String(v.date).slice(0,4)).filter(Boolean),...bills.map(b=>b.dt.slice(0,4))])].sort().reverse();
+ const f=t=>rec(t).filter(v=>iy(v.date)),di=f('diary'),ph=f('photo'),fo=f('food').filter(v=>v.kind==='吃过'),le=f('letter'),ev=f('event'),mo=f('mood'),fi=f('fight'),pl=rec('plan').filter(v=>iy(v.date)&&v.done);
+ const B=bills.filter(b=>iy(b.dt)),ex=B.filter(b=>b.kind==='支出'),F=[];
+ const fr=(ic,big,t,s)=>F.push(`<div class="card static" style="text-align:center;border:2px solid var(--ink)"><span class="stamp">第 ${F.length+1} 帧</span><div style="font-size:30px;margin-top:6px">${ic}</div><div class="big" style="font-size:42px">${big}</div><div>${t}</div><div class="mut">${s||''}</div></div>`);
+ const end=Y===td().slice(0,4)?td():Y+'-12-31',dn=dayN(end);
+ if(dn>0)fr('🎞️',dn,'天 · 一起走过','截至 '+end);
+ if(di.length){const L=[...di].sort((a,b)=>(b.text||'').length-(a.text||'').length)[0];fr('📖',di.length,'篇日记','最长的一篇：'+esc(title(L)))}
+ if(ph.length){const ad=ph.filter(v=>v.ad);fr('📷',ph.length,'张照片足迹',`点亮 ${new Set(ad.map(v=>v.ad.slice(0,2))).size} 个省 · ${new Set(ad.map(v=>v.ad.slice(0,4))).size} 个市`)}
+ if(fo.length){const t=[...fo].sort((a,b)=>(b.star||'').length-(a.star||'').length)[0];fr('😋',fo.length,'家一起吃过的店',t&&t.star?'最爱：'+esc(t.name)+' '+esc(t.star):'')}
+ if(le.length||ev.length||pl.length)fr('💌',le.length,'封情话','还有 '+ev.length+' 件大事记、'+pl.length+' 个完成的约会/心愿');
+ if(mo.length)fr('🌤️',mo.filter(v=>v.score>=4).length,'个好心情的日子',who().map(n=>{const p=mo.filter(v=>v.by===n);return p.length?esc(n)+' 平均 '+MO[Math.round(p.reduce((t,v)=>t+v.score,0)/p.length)]:''}).filter(Boolean).join('　'));
+ if(fi.length)fr('🩹',fi.length,'次吵架复盘','吵架不可怕，复盘就是成长');
+ if(ex.length){const c={},m={};ex.forEach(b=>{c[b.cat]=(c[b.cat]||0)+Number(b.amt);m[b.dt.slice(5,7)]=(m[b.dt.slice(5,7)]||0)+Number(b.amt)});const tc=Object.entries(c).sort((a,b)=>b[1]-a[1])[0],tm=Object.entries(m).sort((a,b)=>b[1]-a[1])[0],bg=[...ex].sort((a,b)=>b.amt-a.amt)[0];
+  fr('💰','¥'+sum(ex,'支出').toFixed(0),'这一年的支出',`最多花在 ${icon(tc[0],'支出')}${esc(tc[0])}（¥${tc[1].toFixed(0)}）· ${+tm[0]}月花得最多 · 最大一笔 ¥${Number(bg.amt).toFixed(0)} ${esc(bg.note||bg.cat)}`);
+  const sh=sum(ex.filter(b=>b.shared),'支出');if(sh>0)fr('🤝','¥'+sh.toFixed(0),'是我们一起花的','占全部支出 '+(sh/sum(ex,'支出')*100).toFixed(0)+'%')}
+ const dep=rec('dep').filter(d=>iy(d.dt)).reduce((t,d)=>t+Number(d.amt),0);if(dep>0)fr('🐷','¥'+dep.toFixed(0),'存进了存钱罐','');
+ return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${yrs.map(y=>`<button class="btn ${y===Y?'':'o'}" onclick="yrSel='${y}';render()">${y}</button>`).join('')}</div><h3 style="text-align:center">🎬 ${Y} 年度胶片</h3>`+(F.length?F.join(''):'<p class="mut" style="text-align:center;padding:30px 0">这一年还没有可回顾的记录</p>');
 }
 function mapTap(e){
  if(!placing)return;
@@ -993,7 +1093,7 @@ async function pwSubmit(){
  try{await setPw(a);$('#dlg').close();toast('密码已修改')}catch(e){toast('修改失败：'+(e.message||e.code))}
 }
 function exportData(){
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(items,null,1)],{type:'application/json'}));a.download='love-journal-backup.json';a.click();
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({...items,_bills:bills},null,1)],{type:'application/json'}));a.download='love-journal-backup.json';a.click();
 }
 setTimeout(preloadMap,0);
 try{if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));if(window.caches)caches.keys().then(k=>k.forEach(n=>caches.delete(n)));indexedDB.deleteDatabase('film');Object.keys(localStorage).filter(k=>/^(cnp2|cnp3|cnmap|cnc)/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
