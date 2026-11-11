@@ -81,6 +81,12 @@ textarea{min-height:80px}
 html,body{max-width:100%;overflow-x:hidden}.card,.mut,.pol p,.tlt,.tld{overflow-wrap:anywhere}
 .amap-marker,.amap-marker-content{pointer-events:none!important}
 #mapslot,#mapslot *,#fslot,#fslot *,#fsslot,#fsslot *{touch-action:none}
+nav button{position:relative}
+.bdg{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#d93025;color:#fff;font:700 10px/16px sans-serif;text-align:center;box-shadow:0 0 0 2px var(--bg)}
+#ffull{position:fixed;inset:0;z-index:150;background:var(--bg);display:none}#ffull.on{display:block}
+#ffbar{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;gap:10px;align-items:center;z-index:5;pointer-events:none}#ffbar>*{pointer-events:auto}
+#fdet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:2px solid var(--ink);padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));max-height:55%;overflow:auto;display:none;box-shadow:0 -4px 12px rgba(0,0,0,.3)}
+#ffslot,#ffslot *{touch-action:none}
 </style>
 </head>
 <body>
@@ -107,7 +113,7 @@ const T={
  fight:{n:'吵架复盘',i:'🩹',f:[['date','日期','d'],['level','严重程度','s',['小摩擦','有点气','比较严重','很严重']],['cause','起因（发生了什么）','a'],['feelA','我当时的感受','a'],['feelB','TA 当时的感受（猜测或问过后填）','a'],['need','我们各自真正想要的','a'],['fix','怎么和好的','a'],['dur','和好用了多久','s',['当天','1天','2-3天','一周以上','还没和好']],['learn','下次怎么做','a'],['promise','我们的约定','a']]},
  food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['addr','地址','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a'],['img','店铺照片（可选）','p']]}
 };
-const NAV=[['home','🏠','首页'],['bill','💰','记账'],['goal','🐷','存钱目标'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片足迹'],['letter','💌','信箱'],['plan','🎟️','计划'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘'],['year','🎬','年度回顾']];
+const NAV=[['home','🏠','首页'],['bill','💰','记账'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片足迹'],['letter','💌','信箱'],['plan','🎟️','计划'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘'],['year','🎬','年度回顾']];
 let items={},meta=null,tab='home',col=null,cur={},ready=false,warn='',H0='',uh='',myid='',placing=null,sel=null,ff='全部';
 const rec=t=>Object.entries(items).filter(([k,v])=>v.type===t).map(([k,v])=>({id:k,...v}));
 const dsort=a=>a.sort((x,y)=>(y.date||y.open||'')<(x.date||x.open||'')?-1:1);
@@ -116,7 +122,7 @@ const start=()=>meta&&meta.start;
 const dayN=d=>start()?Math.round((new Date(d+'T00:00')-new Date(start()+'T00:00'))/864e5)+1:null;
 
 function toast(m){const e=document.createElement('div');e.className='toast';e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
-async function save(id,d){items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
+async function save(id,d){if(d&&d.type&&ME)d.ed=ME.name;items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
 async function del(id){delete items[id];render();if(col)try{await col.doc(id).delete()}catch(e){toast('删除失败')}}
 
 const urlP=new URLSearchParams(location.search);let urlAdd=urlP.get('add')?{amt:(urlP.get('amt')||'').replace(/[^0-9.]/g,''),m:urlP.get('m')||'',src:urlP.get('src')||''}:null;
@@ -281,18 +287,32 @@ function setup(edit){
  save('meta',{a:A,b:B,start:S});
 }
 
+const BTAB={event:'tl',diary:'diary',photo:'photo',letter:'letter',plan:'plan',goal:'plan',dep:'plan',food:'food',mood:'mood',fight:'fight'},BTABS=['tl','diary','photo','letter','plan','food','mood','fight','bill'];
+let seen={};try{seen=JSON.parse(localStorage.getItem('seen')||'{}')}catch(e){}
+function persistSeen(){try{localStorage.setItem('seen',JSON.stringify(seen))}catch(e){}}
+function markSeen(t){seen[t]=new Date().toISOString();persistSeen()}
+function badges(){
+ const c={};if(!ME)return c;
+ if(!seen._b){seen._b=new Date().toISOString();persistSeen()}
+ const sn=t=>Date.parse(seen[t]||seen._b);
+ Object.entries(items).forEach(([id,v])=>{const t=v&&BTAB[v.type];if(!t||!vers[id])return;const ed=v.ed||v.by;if(ed&&ed!==ME.name&&Date.parse(vers[id])>sn(t))c[t]=(c[t]||0)+1});
+ bills.forEach(b=>{const ed=b.editor||b.owner;if(ed!==ME.uid&&Date.parse(b.updated_at||b.created_at)>sn('bill'))c.bill=(c.bill||0)+1});
+ return c;
+}
 function render(){
  if(!ready)return;
  if(touching){pend=true;return}
  if(!unlockedNow()){$('#nav').innerHTML='';$('#fab').style.display='none';$('#sub').textContent=warn||'LOCKED';$('#ttl').textContent='我们的胶片日记';$('#app').innerHTML=loginView();return}
- $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${i} ${n}</button>`).join('');
+ if(meta&&BTABS.includes(tab))markSeen(tab);
+ const BG=badges();
+ $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${i} ${n}${BG[k]?`<span class="bdg">${BG[k]>99?'99+':BG[k]}</span>`:''}</button>`).join('');
  $('#ttl').textContent=meta?`${meta.a} & ${meta.b}`:'我们的胶片日记';
  $('#sub').textContent=warn||(meta?'SINCE '+meta.start:'LOVE FILM JOURNAL');
  $('#fab').style.display=meta&&tab!=='home'&&tab!=='year'?'':'none';
- $('#app').innerHTML=pwBanner()+view();mountMap();
+ $('#app').innerHTML=pwBanner()+view();mountMap();if(foodFull){if(sel&&items[sel])showFD(sel);else fdClose()}
 }
 function go(k){tab=k;render();scrollTo(0,0)}
-$('#fab').onclick=()=>{if(tab==='bill'){openBill();return}if(tab==='goal'){goalForm();return}if(tab==='food'&&AMAP.key){const q=$('#sq');if(q){q.scrollIntoView({block:'center'});q.focus();return}}openForm(tab==='tl'?'event':tab)};
+$('#fab').onclick=()=>{if(tab==='bill'){openBill();return}if(tab==='plan'&&pTab==='goal'){goalForm();return}if(tab==='food'&&AMAP.key){const q=$('#sq');if(q){q.scrollIntoView({block:'center'});q.focus();return}}openForm(tab==='tl'?'event':tab)};
 
 function openForm(type,id,pos){
  if(type==='letter'&&id&&!(pos&&pos.edit))return openLetter(id);
@@ -379,7 +399,7 @@ function loadAMap(){
  document.head.appendChild(sc);
  setTimeout(()=>{if(amapState===1){amapState=3;render()}},20000);
 }
-function mountMap(){mountF();const e=$('#mapslot');if(e&&mEl){e.style.position='relative';if(mEl.parentNode!==e){e.appendChild(mEl);if(!mMounted){mMounted=true;fRes()}}if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
+function mountMap(){mountF();if(foodFull)return;const e=$('#mapslot');if(e&&mEl){e.style.position='relative';if(mEl.parentNode!==e){e.appendChild(mEl);if(!mMounted){mMounted=true;fRes()}}if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
 let cluster=null,tips=[],tmr=null;
 function pin(v,n,ids){
  const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
@@ -433,6 +453,25 @@ function pickPoi(i){
 }
 function navApple(id){const v=items[id];location.href=v.lng!=null?`https://maps.apple.com/?daddr=${v.lat},${v.lng}&dirflg=d`:`https://maps.apple.com/?daddr=${encodeURIComponent((v.addr||'')+' '+v.name)}&dirflg=d`}
 function navAmap(id){const v=items[id];if(v.lng==null)return;location.href=`https://uri.amap.com/navigation?to=${v.lng},${v.lat},${encodeURIComponent(v.name)}&mode=car&coordinate=gaode&callnative=1`}
+let foodFull=false,fdMore=false;
+function openFoodFull(){
+ if(!amap||!mEl||!plugReady){toast('地图还没加载好，请稍等');return}
+ let o=$('#ffull');
+ if(!o){o=document.createElement('div');o.id='ffull';o.innerHTML='<div id="ffslot" style="position:absolute;inset:0"></div><div id="ffbar"><button class="btn" onclick="closeFoodFull()">✕ 关闭</button><span style="background:rgba(0,0,0,.6);color:#fff;padding:5px 12px;border-radius:14px;font-size:13px">点标记看详情和导航</span></div><div id="fdet"></div><button class="locb" style="top:calc(10px + env(safe-area-inset-top,0px))" onclick="goMe()">◎</button>';document.body.appendChild(o)}
+ foodFull=true;fdMore=false;o.classList.add('on');$('#fdet').style.display='none';
+ $('#ffslot').appendChild(mEl);mEl.style.aspectRatio='auto';mEl.style.width='100%';mEl.style.height='100%';mEl.style.border='0';mEl.style.borderRadius='0';
+ fRes();setTimeout(()=>{mSig='';drawMarkers()},350);
+}
+function closeFoodFull(){
+ foodFull=false;sel=null;const o=$('#ffull');if(o)o.classList.remove('on');
+ if(mEl){mEl.style.aspectRatio='3/4';mEl.style.width='';mEl.style.height='';mEl.style.border='';mEl.style.borderRadius=''}
+ mSig='';render();fRes();
+}
+function fdClose(){sel=null;const e=$('#fdet');if(e){e.style.display='none';e.innerHTML=''}if(foodFull){mSig='';drawMarkers()}}
+function showFD(id){
+ const v=items[id],e=$('#fdet');if(!v||!e)return;const eat=v.kind==='吃过';e.style.display='block';
+ e.innerHTML=`<div class="row" style="align-items:center"><h3 style="margin:0">${eat?'😋':'🤤'} ${esc(v.name)} <span style="color:var(--acc)">${esc(v.star||'')}</span></h3><button class="btn o" onclick="fdClose()">✕</button></div><div class="mut">${esc(v.addr||'')}</div>${navLinks(v)}<p style="margin:8px 0 0"><a href="#" onclick="fdMore=!fdMore;showFD('${id}');return false" style="color:var(--acc)">${fdMore?'▼ 收起详情':'▲ 展开详情'}</a></p>${fdMore?`${v.img?`<img src="${v.img}" alt="" style="width:100%;margin-top:8px;border-radius:4px;filter:sepia(.25)">`:''}<div style="margin-top:6px"><span class="tag">${esc(v.kind||'')}</span>${v.cuisine?`<span class="tag">${esc(v.cuisine)}</span>`:''}${v.price?`<span class="tag">人均 ${esc(v.price)}</span>`:''}${v.date?`<span class="tag">${esc(v.date)}</span>`:''}${v.by?`<span class="tag">${esc(v.by)}</span>`:''}</div>${v.note?`<div style="white-space:pre-wrap;margin-top:6px">${esc(v.note)}</div>`:''}<p style="text-align:right"><button class="btn o" onclick="openForm('food','${id}')">✏️ 编辑</button></p>`:''}`;
+}
 function foodView(){
  if(!(AMAP.key&&AMAP.sec))return foodViewOld();
  loadAMap();
@@ -443,7 +482,7 @@ function foodView(){
  const res=sres.map((p,i)=>`<div class="card" onclick="pickPoi(${i})"><b>${esc(p.name)}</b><div class="mut">${esc((p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''))}</div></div>`).join('');
  return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
  <div style="display:flex;gap:6px;margin-bottom:8px">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}</div>
- ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
+ ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div style="text-align:right;margin-bottom:6px"><button class="btn o" onclick="openFoodFull()">⛶ 全屏地图</button></div><div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
  <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p><p class="mut" id="tmline" style="font-size:11px;margin-top:-6px">${tmText()}</p>
  ${s?card({...s,id:sel}):''}
  ${a.length?a.map(card).join(''):empty()}`;
@@ -809,7 +848,12 @@ function moodView(){
  const tg={};ms.forEach(v=>{if(v.tag)tg[v.tag]=(tg[v.tag]||0)+1});const top=Object.entries(tg).sort((a,b)=>b[1]-a[1])[0];
  return `<div class="card static"><div class="row" style="align-items:center"><button class="btn o" onclick="mm=shiftM(-1);render()">‹</button><b>${Y}年${M}月</b><button class="btn o" onclick="mm=shiftM(1);render()">›</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;text-align:center" class="mut">${['一','二','三','四','五','六','日'].map(x=>`<div>${x}</div>`).join('')}${cells}</div><p class="mut" style="margin:8px 0 0">${st}${top?'　最常见：'+esc(top[0]):''}</p><p class="mut" style="margin:4px 0 0">点日期格子可以直接记那一天的心情；颜色越暖心情越好</p></div>${ms.length?dsort(ms).map(card).join(''):empty()}`;
 }
+let pTab='plan';
 function planView(){
+ const sg=`<div style="display:flex;gap:6px;margin-bottom:10px">${[['plan','🎟️ 约会&心愿'],['goal','🐷 存钱目标']].map(([k,n])=>`<button class="btn ${pTab===k?'':'o'}" onclick="pTab='${k}';render()">${n}</button>`).join('')}</div>`;
+ return sg+(pTab==='goal'?goalView():planBody());
+}
+function planBody(){
  const a=rec('plan'),up=a.filter(v=>!v.done&&v.date).sort((x,y)=>x.date<y.date?-1:1),nd=a.filter(v=>!v.done&&!v.date),dn=a.filter(v=>v.done).sort((x,y)=>(y.date||'')<(x.date||'')?-1:1);
  const bud=a.filter(v=>!v.done).reduce((t,v)=>t+(parseFloat((v.budget||'').replace(/[^\d.]/g,''))||0),0),wish=a.filter(v=>v.kind==='心愿清单');
  const sec=(t,l)=>l.length?`<h3 style="margin:14px 0 8px">${t}</h3>${l.map(card).join('')}`:'';
@@ -1030,7 +1074,9 @@ function mapTap(e){
  const p=placing;placing=null;
  if(p==='new')openForm('food',null,{x,y});else{save(p,{...items[p],x,y})}
 }
-function selPin(id){sel=sel===id?null:id;render();const v=items[id];if(amap&&v&&v.lng!=null&&sel===id)amap.setCenter([v.lng,v.lat])}
+function selPin(id){
+ if(foodFull){sel=id;drawMarkers();showFD(id);const v=items[id];if(amap&&v&&v.lng!=null){try{const b=amap.getBounds(),sp=b.getNorthEast().lat-b.getSouthWest().lat;amap.setCenter([v.lng,v.lat-sp*.18])}catch(e){amap.setCenter([v.lng,v.lat])}}return}
+sel=sel===id?null:id;render();const v=items[id];if(amap&&v&&v.lng!=null&&sel===id)amap.setCenter([v.lng,v.lat])}
 function ate(id){save(id,{...items[id],kind:'吃过',date:td()}).then(()=>openForm('food',id))}
 function mapBg(){
  const i=document.createElement('input');i.type='file';i.accept='image/*';
@@ -1098,7 +1144,7 @@ function exportData(){
 setTimeout(preloadMap,0);
 try{if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));if(window.caches)caches.keys().then(k=>k.forEach(n=>caches.delete(n)));indexedDB.deleteDatabase('film');Object.keys(localStorage).filter(k=>/^(cnp2|cnp3|cnmap|cnc)/.test(k)).forEach(k=>localStorage.removeItem(k))}catch(e){}
 (()=>{
- const inMap=e=>e.target&&e.target.closest&&e.target.closest('#fslot,#fsslot,#mapslot');
+ const inMap=e=>e.target&&e.target.closest&&e.target.closest('#fslot,#fsslot,#mapslot,#ffslot');
  ['touchstart','touchmove'].forEach(ev=>document.addEventListener(ev,e=>{if(inMap(e)){touching=true;clearTimeout(touchTm)}},{passive:true,capture:true}));
  ['touchend','touchcancel'].forEach(ev=>document.addEventListener(ev,e=>{if(e.touches&&e.touches.length)return;touching=false;touchEndT=Date.now();if(pend)setTimeout(()=>{if(pend&&!touching){pend=false;render()}},300)},{passive:true,capture:true}));
  ['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev,e=>{if(inMap(e))e.preventDefault()},{passive:false}));
