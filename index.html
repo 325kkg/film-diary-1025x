@@ -223,7 +223,7 @@ function card(v){
  if(v.type==='mood')h=`<div class="row"><h3><span style="font-size:24px">${MO[v.score]||''}</span> ${esc(v.date)}</h3>${by}</div><div class="mut">${v.tag?`<span class="tag">${esc(v.tag)}</span>`:''}${esc(v.inten||'')}</div>${body('note')}`;
  if(v.type==='fight'){const sc=(l,k)=>v[k]?`<div style="margin-top:4px"><span class="tag">${l}</span>${esc(v[k])}</div>`:'';
  h=`<div class="row"><h3>🩹 ${esc(v.date)} ${v.level?`<span class="tag">${esc(v.level)}</span>`:''}</h3>${by}</div>${sc('起因','cause')}${sc('我的感受','feelA')}${sc('TA的感受','feelB')}${sc('真正想要','need')}${sc('和好','fix')}${sc('下次','learn')}${sc('约定','promise')}${v.dur?`<div class="stamp" style="margin-top:6px">和好用时：${esc(v.dur)}</div>`:''}`}
- if(v.type==='food')h=`${v.img?`<img src="${v.img}" alt="" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:6px;float:right;margin-left:8px">`:''}<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(shortAddr(v.addr))} ${by}</div>${body('note')}${navLinks(v)}`;
+ if(v.type==='food')h=`${v.img?`<img src="${v.img}" alt="" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:6px;float:right;margin-left:8px">`:''}<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(shortAddr(v.addr))} ${by}</div>${eatBar(v)}${body('note')}${navLinks(v)}`;
  return `<div class="card" onclick="openForm('${v.type}','${v.id}')">${h}</div>`;
 }
 
@@ -484,7 +484,7 @@ function closeFoodFull(){
 function fdClose(){sel=null;const e=$('#fdet');if(e){e.style.display='none';e.innerHTML=''}if(foodFull){mSig='';drawMarkers()}}
 function showFD(id){
  const v=items[id],e=$('#fdet');if(!v||!e)return;const eat=v.kind==='吃过';e.style.display='block';
- e.innerHTML=`<div class="row" style="align-items:center"><h3 style="margin:0">${eat?'😋':'🤤'} ${esc(v.name)} <span style="color:var(--acc)">${esc(v.star||'')}</span></h3><button class="btn o" onclick="fdClose()">✕</button></div><div class="mut">${esc(v.addr||'')}</div>${navLinks(v)}<p style="margin:8px 0 0"><a href="#" onclick="fdMore=!fdMore;showFD('${id}');return false" style="color:var(--acc)">${fdMore?'▼ 收起详情':'▲ 展开详情'}</a></p>${fdMore?`${v.img?`<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px">${[v.img,...(v.more||[])].map(u=>`<img src="${u}" alt="" style="height:160px;flex:none;border-radius:4px;filter:sepia(.25)">`).join('')}</div>`:''}<div style="margin-top:6px"><span class="tag">${esc(v.kind||'')}</span>${v.cuisine?`<span class="tag">${esc(v.cuisine)}</span>`:''}${v.price?`<span class="tag">人均 ${esc(v.price)}</span>`:''}${v.date?`<span class="tag">${esc(v.date)}</span>`:''}${v.by?`<span class="tag">${esc(v.by)}</span>`:''}</div>${v.note?`<div style="white-space:pre-wrap;margin-top:6px">${esc(v.note)}</div>`:''}<p style="text-align:right"><button class="btn o" onclick="openForm('food','${id}')">✏️ 编辑</button></p>`:''}`;
+ e.innerHTML=`<div class="row" style="align-items:center"><h3 style="margin:0">${eat?'😋':'🤤'} ${esc(v.name)} <span style="color:var(--acc)">${esc(v.star||'')}</span></h3><button class="btn o" onclick="fdClose()">✕</button></div><div class="mut">${esc(v.addr||'')}</div>${eatBar(v)}${navLinks(v)}<p style="margin:8px 0 0"><a href="#" onclick="fdMore=!fdMore;showFD('${id}');return false" style="color:var(--acc)">${fdMore?'▼ 收起详情':'▲ 展开详情'}</a></p>${fdMore?`${v.img?`<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px">${[v.img,...(v.more||[])].map(u=>`<img src="${u}" alt="" style="height:160px;flex:none;border-radius:4px;filter:sepia(.25)">`).join('')}</div>`:''}<div style="margin-top:6px"><span class="tag">${esc(v.kind||'')}</span>${v.cuisine?`<span class="tag">${esc(v.cuisine)}</span>`:''}${v.price?`<span class="tag">人均 ${esc(v.price)}</span>`:''}${v.date?`<span class="tag">${esc(v.date)}</span>`:''}${v.by?`<span class="tag">${esc(v.by)}</span>`:''}</div>${v.note?`<div style="white-space:pre-wrap;margin-top:6px">${esc(v.note)}</div>`:''}<p style="text-align:right"><button class="btn o" onclick="openForm('food','${id}')">✏️ 编辑</button></p>`:''}`;
 }
 function foodView(){
  if(!(AMAP.key&&AMAP.sec))return foodViewOld();
@@ -496,7 +496,7 @@ function foodView(){
  const res=sres.map((p,i)=>`<div class="card" onclick="pickPoi(${i})"><b>${esc(p.name)}</b><div class="mut">${esc((p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''))}</div></div>`).join('');
  return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
  <div style="display:flex;gap:6px;margin-bottom:8px">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}</div>
- ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div style="text-align:right;margin-bottom:6px"><button class="btn o" onclick="openFoodFull()">⛶ 全屏地图</button></div><div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
+ ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div style="text-align:right;margin-bottom:6px"><button class="btn o" onclick="openEatStats()">📊 吃过统计</button> <button class="btn o" onclick="openFoodFull()">⛶ 全屏地图</button></div><div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
  <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p><p class="mut" id="tmline" style="font-size:11px;margin-top:-6px">${tmText()}</p>
  ${s?card({...s,id:sel}):''}
  ${a.length?a.map(card).join(''):empty()}`;
@@ -530,10 +530,18 @@ function locateNow(gesture){
  },e=>locFail(e,gesture),{enableHighAccuracy:false,timeout:15000,maximumAge:60000});
 }
 function goMe(){if(me&&amap){amap.setZoomAndCenter(16,me);return}locateNow(true)}
+const TLT=[['event','🎉 大事记'],['photo','📷 照片'],['diary','📖 日记'],['food','🍜 美食'],['plan','🎟️ 计划'],['mood','🌤️ 心情'],['fight','🩹 复盘']];
+let tlF=null;try{tlF=JSON.parse(localStorage.getItem('tlf')||'null')}catch(e){}
+function setTlF(a){tlF=a&&a.length&&a.length<TLT.length?a:null;try{localStorage.setItem('tlf',JSON.stringify(tlF))}catch(e){}render()}
+function tlTog(t){if(!tlF)return setTlF([t]);setTlF(tlF.includes(t)?tlF.filter(x=>x!==t):tlF.concat(t))}
 function tlView(){
- const a=dsort(Object.entries(items).filter(([k,v])=>v.type&&v.type!=='letter'&&v.date).map(([k,v])=>({id:k,...v})));
- if(!a.length)return empty();
- let h='<div class="tl2">',ym='',i=0;
+ const all=dsort(Object.entries(items).filter(([k,v])=>v.type&&v.type!=='letter'&&v.date).map(([k,v])=>({id:k,...v})));
+ if(!all.length)return empty();
+ const a=tlF?all.filter(v=>tlF.includes(v.type)):all,key=tlF?[...tlF].sort().join():'';
+ const ch=(on,fn,n)=>`<button class="btn ${on?'':'o'}" style="flex:none;padding:4px 10px;font-size:13px" onclick="${fn}">${n}</button>`;
+ let h=`<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px">${ch(!tlF,'setTlF(null)','全部')}${ch(key==='event,photo','setTlF([\'event\',\'photo\'])','⭐ 重点')}${TLT.map(([t,n])=>ch(tlF&&tlF.includes(t),`tlTog('${t}')`,n)).join('')}</div>`;
+ if(!a.length)return h+'<p class="mut" style="text-align:center;padding:30px 0">这个分类下还没有内容</p>';
+ h+='<div class="tl2">';let ym='',i=0;
  a.forEach(v=>{
   const m=v.date.slice(0,7);
   if(m!==ym){ym=m;h+=`<div class="tlh"><span class="stamp">${m.slice(0,4)} · ${+m.slice(5)}月</span></div>`}
@@ -1100,7 +1108,24 @@ function mapTap(e){
 function selPin(id){
  if(foodFull){sel=id;drawMarkers();showFD(id);const v=items[id];if(amap&&v&&v.lng!=null){try{const b=amap.getBounds(),sp=b.getNorthEast().lat-b.getSouthWest().lat;amap.setCenter([v.lng,v.lat-sp*.18])}catch(e){amap.setCenter([v.lng,v.lat])}}return}
 sel=sel===id?null:id;render();const v=items[id];if(amap&&v&&v.lng!=null&&sel===id)amap.setCenter([v.lng,v.lat])}
-function ate(id){save(id,{...items[id],kind:'吃过',date:td()}).then(()=>openForm('food',id))}
+function ate(id){save(id,{...items[id],kind:'吃过',date:td(),eats:[td()]}).then(()=>openForm('food',id))}
+const eatList=v=>v.kind!=='吃过'?[]:(v.eats&&v.eats.length?v.eats:[v.date||'']),eatN=v=>eatList(v).length;
+async function eatAgain(id){const v=items[id];if(!v)return;const L=eatList(v).slice();L.push(td());await save(id,{...v,kind:'吃过',date:td(),eats:L});toast('已记录，第 '+L.length+' 次');}
+async function eatUndo(id){const v=items[id];if(!v)return;const L=eatList(v).slice();if(L.length<=1)return;L.pop();await save(id,{...v,eats:L,date:L[L.length-1]||v.date});}
+function eatBar(v){if(v.kind!=='吃过')return '';const n=eatN(v);return `<div style="margin:6px 0"><span class="tag">🍽 吃过 ${n} 次</span> <button class="btn o" style="padding:2px 8px;font-size:12px" onclick="event.stopPropagation();eatAgain('${v.id}')">＋再吃一次</button>${n>1?` <button class="btn o" style="padding:2px 8px;font-size:12px" onclick="event.stopPropagation();eatUndo('${v.id}')">－1</button>`:''}</div>`}
+let esTab='shop';
+function openEatStats(t){
+ if(t)esTab=t;
+ const F=Object.entries(items).filter(([k,v])=>v&&v.type==='food'&&v.kind==='吃过').map(([k,v])=>({id:k,...v}));
+ const tot=F.reduce((a,v)=>a+eatN(v),0),m={};
+ if(esTab==='shop')F.forEach(v=>m[v.name]=(m[v.name]||0)+eatN(v));
+ else if(esTab==='kind')F.forEach(v=>{const ks=String(v.cuisine||'').split(/[,，、/；;\s]+/).filter(Boolean);(ks.length?ks:['未填写']).forEach(k=>m[k]=(m[k]||0)+eatN(v))});
+ else F.forEach(v=>eatList(v).forEach(d=>{const k=d?d.slice(0,7):'未记日期';m[k]=(m[k]||0)+1}));
+ let rows=Object.entries(m);rows=esTab==='month'?rows.sort((a,b)=>a[0]<b[0]?1:-1).slice(0,12):rows.sort((a,b)=>b[1]-a[1]).slice(0,15);
+ const mx=Math.max(1,...rows.map(r=>r[1]));
+ const sg=[['shop','按店铺'],['kind','按菜系/食物'],['month','按月份']].map(([k,n])=>`<button class="btn ${esTab===k?'':'o'}" style="padding:4px 10px;font-size:13px" onclick="openEatStats('${k}')">${n}</button>`).join(' ');
+ showDlg(`<h3>📊 吃过统计</h3><p class="mut">共 ${F.length} 家店，一共吃了 ${tot} 次</p><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${sg}</div>${rows.length?rows.map(([k,n])=>`<div style="margin:7px 0"><div class="row"><span>${esc(k)}</span><b style="color:var(--acc)">${n} 次</b></div><div style="height:12px;border:1px solid var(--ink);border-radius:6px;overflow:hidden"><div style="height:100%;width:${n/mx*100}%;background:var(--acc)"></div></div></div>`).join(''):'<p class="mut" style="text-align:center;padding:20px 0">还没有吃过的记录</p>'}${esTab==='kind'?'<p class="mut">按“菜系/推荐菜”里填的词统计，用逗号、顿号或空格分开多个。</p>':''}<p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button></p>`);
+}
 function mapBg(){
  const i=document.createElement('input');i.type='file';i.accept='image/*';
  i.onchange=()=>{const f=i.files[0];if(!f)return;const im=new Image();im.onload=()=>{let w=1000,q=.7,u;const c=document.createElement('canvas');do{const s=Math.min(1,w/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);u=c.toDataURL('image/jpeg',q);w*=.85;q*=.9}while(u.length>200000&&w>300);save('mapbg',{img:u})};im.src=URL.createObjectURL(f)};
