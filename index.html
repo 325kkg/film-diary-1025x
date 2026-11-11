@@ -825,10 +825,10 @@ const iso=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const icon=(c,k)=>((k==='收入'?INC:EXP).find(x=>x[0]===c)||['','📦'])[1];
 const wk=d=>'周'+'日一二三四五六'[new Date(d+'T00:00').getDay()];
 const mem=u=>(MEM.find(m=>m.uid===u)||{}).name||'';
-const inScope=b=>bScope==='all'?true:bScope==='me'?(ME&&b.owner===ME.uid):(ME&&b.owner!==ME.uid);
+const inScope=b=>!b.pending&&(bScope==='all'?true:bScope==='shared'?!!b.shared:bScope==='me'?(!b.shared&&ME&&b.owner===ME.uid):(!b.shared&&ME&&b.owner!==ME.uid));
 const sum=(l,k)=>l.filter(b=>b.kind===k).reduce((t,b)=>t+Number(b.amt),0);
 async function loadBills(){
- try{const r=(await rest('bills?select=*&order=dt.desc,created_at.desc&limit=3000'))||[],sg=JSON.stringify(r.map(b=>[b.id,b.kind,b.owner,b.amt,b.cat,b.dt,b.note,b.acct]));
+ try{const r=(await rest('bills?select=*&order=dt.desc,created_at.desc&limit=3000'))||[],sg=JSON.stringify(r.map(b=>[b.id,b.kind,b.owner,b.amt,b.cat,b.dt,b.note,b.acct,b.shared,b.pending,b.merchant]));
   if(sg===bSig)return false;bills=r;bSig=sg;return true}catch(e){return false}
 }
 function handleUrl(){
@@ -837,14 +837,15 @@ function handleUrl(){
 }
 function openBill(id,pre){
  const b=id?bills.find(x=>x.id===id):null;
-  bd=b?{id:b.id,kind:b.kind,cat:b.cat,amt:String(b.amt),note:b.note||'',acct:b.acct||'',dt:b.dt}:{id:null,kind:'支出',cat:'',amt:'',note:'',acct:'',dt:td(),...(pre||{})};
+ const defOwner=(bScope==='ta'&&MEM.find(m=>ME&&m.uid!==ME.uid)?MEM.find(m=>ME&&m.uid!==ME.uid).uid:(ME&&ME.uid))||'';
+ bd=b?{id:b.id,kind:b.kind,cat:b.cat,amt:String(b.amt),note:b.note||b.merchant||'',acct:b.acct||'',dt:b.dt,shared:!!b.shared,owner:b.owner||defOwner}:{id:null,kind:'支出',cat:'',amt:'',note:'',acct:'',dt:td(),shared:bScope==='shared',owner:defOwner,...(pre||{})};
  drawSheet();$('#dlg').showModal();
 }
 function drawSheet(){
  const v=bd,L=v.kind==='收入'?INC:EXP,ks=['1','2','3','⌫','4','5','6','C','7','8','9','再记','.','0','00','保存'];
  $('#dlg').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><button class="btn o" onclick="$('#dlg').close()">✕</button><div style="display:flex;gap:6px">${['支出','收入'].map(k=>`<button class="btn ${v.kind===k?'':'o'}" onclick="bd.kind='${k}';bd.cat='';drawSheet()">${k}</button>`).join('')}</div><span style="width:44px"></span></div>
  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:10px 0;text-align:center">${L.map(([n,i])=>`<div onclick="bd.cat='${n}';drawSheet()" style="cursor:pointer;padding:5px 0;border-radius:8px;${v.cat===n?'background:var(--acc);color:#fff':''}"><div style="font-size:24px">${i}</div><div style="font-size:11px">${n}</div></div>`).join('')}</div>
- <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><select onchange="bd.acct=this.value" style="width:auto">${['',...ACC].map(a=>`<option value="${a}" ${a===v.acct?'selected':''}>${a||'选择账户'}</option>`).join('')}</select><input type="date" value="${v.dt}" onchange="bd.dt=this.value" style="width:auto"></div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><select onchange="bd.acct=this.value" style="width:auto">${['',...ACC].map(a=>`<option value="${a}" ${a===v.acct?'selected':''}>${a||'选择账户'}</option>`).join('')}</select><input type="date" value="${v.dt}" onchange="bd.dt=this.value" style="width:auto"><label style="margin:0;display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--ink);cursor:pointer"><input type="checkbox" ${v.shared?'checked':''} onchange="bd.shared=this.checked">💑 共同账单</label>${MEM.length>1?`<select onchange="bd.owner=this.value" style="width:auto">${MEM.map(m=>`<option value="${m.uid}" ${m.uid===v.owner?'selected':''}>归属：${esc(m.name)}</option>`).join('')}</select>`:''}</div>
  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input placeholder="点此输入备注…" value="${esc(v.note)}" oninput="bd.note=this.value"><b id="bamt" style="font-size:26px;color:var(--acc);min-width:100px;text-align:right">${v.amt||'0.00'}</b></div>
  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${ks.map(k=>`<button class="btn ${'保存'===k?'':'o'}" style="padding:12px 0;font-size:18px" onclick="key('${k}')">${k}</button>`).join('')}</div>
  ${v.id?'<p style="text-align:right"><button class="btn o" onclick="delBill()">删除这笔</button></p>':''}`;
@@ -859,7 +860,8 @@ function key(k){
 async function saveBill(again){
  const v=bd,amt=parseFloat(v.amt);
  if(!(amt>0)){toast('请输入金额');return}if(!v.cat){toast('请选择分类');return}
- const row={kind:v.kind,amt,cat:v.cat,note:v.note||'',acct:v.acct||'',dt:v.dt||td()};
+ const row={kind:v.kind,amt,cat:v.cat,note:v.note||'',acct:v.acct||'',dt:v.dt||td(),shared:!!v.shared,pending:false};
+ if(v.owner)row.owner=v.owner;
  try{if(v.id)await rest('bills?id=eq.'+v.id,{method:'PATCH',body:JSON.stringify(row)});else await rest('bills',{method:'POST',body:JSON.stringify(row)})}
  catch(e){toast('保存失败：'+e.message);return}
  await loadBills();
@@ -874,25 +876,39 @@ function rangeOf(r,a){const d=new Date(a+'T00:00');if(r==='d')return [a,a];
  if(r==='w'){const s=new Date(d);s.setDate(d.getDate()-(d.getDay()+6)%7);const e=new Date(s);e.setDate(s.getDate()+6);return [iso(s),iso(e)]}
  return [a.slice(0,8)+'01',iso(new Date(d.getFullYear(),d.getMonth()+1,0))]}
 function billRow(b){
- return `<div class="card" onclick="openBill('${b.id}')" style="display:flex;gap:10px;align-items:center;padding:10px 12px;margin-bottom:8px"><span style="font-size:24px">${icon(b.cat,b.kind)}</span><div style="flex:1;min-width:0"><b>${esc(b.cat||'未分类')}</b> <span class="tag">${esc(mem(b.owner)||'TA')}</span><div class="mut">${esc(b.note||'')} ${esc(b.acct||'')}</div></div><b style="color:${b.kind==='收入'?'#3f7d8c':'var(--acc)'}">${b.kind==='收入'?'+':'-'}${Number(b.amt).toFixed(2)}</b></div>`;
+ const sub=[b.merchant,b.note,b.acct].filter(Boolean).join(' · ');
+ return `<div class="card" onclick="openBill('${b.id}')" style="display:flex;gap:10px;align-items:center;padding:10px 12px;margin-bottom:8px"><span style="font-size:24px">${icon(b.cat,b.kind)}</span><div style="flex:1;min-width:0"><b>${esc(b.cat||'未分类')}</b> <span class="tag" style="${b.shared?'border-color:var(--acc);color:var(--acc)':''}">${b.shared?'💑 共同':'个人'}</span><span class="tag">${esc(mem(b.owner)||'TA')}</span><div class="mut">${esc(sub)}</div></div><b style="color:${b.kind==='收入'?'#3f7d8c':'var(--acc)'}">${b.kind==='收入'?'+':'-'}${Number(b.amt).toFixed(2)}</b></div>`;
 }
 function donut(parts){
  const T=parts.reduce((t,p)=>t+p.v,0);if(!T)return '';let a=-Math.PI/2,h='';
  parts.forEach(p=>{const f=p.v/T;if(f>.999){h+=`<circle cx="60" cy="60" r="50" fill="none" stroke="${p.c}" stroke-width="18"/>`;return}const b=a+f*2*Math.PI;h+=`<path d="M${60+50*Math.cos(a)},${60+50*Math.sin(a)}A50,50 0 ${f>.5?1:0} 1 ${60+50*Math.cos(b)},${60+50*Math.sin(b)}" fill="none" stroke="${p.c}" stroke-width="18"/>`;a=b});
  return `<svg viewBox="0 0 120 120" width="130">${h}<text x="60" y="65" text-anchor="middle" font-size="13" style="fill:var(--ink)">¥${T.toFixed(0)}</text></svg>`;
 }
+async function genKey(){
+ try{const k=await rest('rpc/make_shortcut_key',{method:'POST',body:'{}'});
+  const box=$('#sckey');if(box)box.innerHTML=`<div class="mut" style="margin:6px 0">你的专属密钥（点下方按钮复制，勿截图外传）：</div><input readonly value="${esc(k)}" onclick="this.select()"><p><button class="btn" onclick="navigator.clipboard.writeText('${esc(k)}');toast('已复制密钥')">复制密钥</button></p>`}
+ catch(e){toast('生成失败：'+e.message)}
+}
+function scSetup(){
+ const u=location.origin+location.pathname;
+ $('#dlg').innerHTML=`<h3>⚙︎ 付款后自动记账</h3><p class="mut">在 iPhone“快捷指令 → 自动化 → 钱包（交易）”里可配置付款后自动跳出或静默记账：</p><div class="card static"><b>方式一：弹窗选分类（最简单）</b><div class="mut" style="margin-top:4px">自动化里用“打开 URL”，填入：<br>${esc(u)}?add=1&amp;src=applepay&amp;amt=金额&amp;m=商户</div></div><div class="card static"><b>方式二：静默记入“待分类”</b><div class="mut" style="margin-top:4px">接口地址：${esc(CFG.url)}/rest/v1/rpc/quick_add<br>请求头 apikey：${esc(CFG.key)}</div><div id="sckey" style="margin-top:8px"><button class="btn o" onclick="genKey()">生成/重置我的快捷指令密钥</button></div></div><p style="text-align:right"><button class="btn" onclick="$('#dlg').close()">关闭</button></p>`;
+ $('#dlg').showModal();
+}
 function billView(){
  if(!ME)return empty();
  if(!bMonth)bMonth=td().slice(0,7);if(!bAnchor)bAnchor=td();
+ const pendB=bills.filter(b=>b.pending);
+ const pBan=pendB.length?`<div class="card static" style="border-color:var(--acc)"><b>🔔 ${pendB.length} 笔付款待分类（点此补充分类）</b>${pendB.map(b=>`<div class="row" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);cursor:pointer" onclick="openBill('${b.id}')"><span>${esc(b.dt.slice(5))} · ${esc(b.merchant||b.note||'待补充')} ${esc(b.acct||'')} <span class="tag">${esc(mem(b.owner)||'TA')}</span></span><b style="color:var(--acc)">-¥${Number(b.amt).toFixed(2)} ›</b></div>`).join('')}</div>`:'';
  const ok=bills.filter(inScope);
- const seg=(cur,o,fn)=>`<div style="display:flex;gap:6px">${o.map(([k,n])=>`<button class="btn ${cur===k?'':'o'}" onclick="${fn}('${k}')">${n}</button>`).join('')}</div>`;
- const head=`<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap">${seg(bScope,[['all','全部'],['me','我记的'],['ta','TA记的']],'setScope')}${seg(bTab,[['list','明细'],['stat','统计']],'setBTab')}</div>`;
+ const seg=(cur,o,fn)=>`<div style="display:flex;gap:5px;flex-wrap:wrap">${o.map(([k,n])=>`<button class="btn ${cur===k?'':'o'}" style="padding:6px 10px;font-size:13px" onclick="${fn}('${k}')">${n}</button>`).join('')}</div>`;
+ const head=pBan+`<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap">${seg(bScope,[['all','全部'],['shared','💑 共同'],['me','我的个人'],['ta','TA的个人']],'setScope')}${seg(bTab,[['list','明细'],['stat','统计']],'setBTab')}</div>`;
+ const foot=`<p style="text-align:center;margin-top:16px"><button class="btn o" onclick="scSetup()">⚙︎ 付款后自动记账</button></p>`;
  if(bTab==='list'){
   const ml=ok.filter(b=>b.dt.startsWith(bMonth)),e=sum(ml,'支出'),i=sum(ml,'收入'),days={};
   ml.forEach(b=>(days[b.dt]=days[b.dt]||[]).push(b));
   const [Y,M]=bMonth.split('-');
   return head+`<div class="card static"><div class="row" style="align-items:center"><button class="btn o" onclick="shiftBM(-1)">‹</button><b>${Y}年${+M}月</b><button class="btn o" onclick="shiftBM(1)">›</button></div><div style="display:flex;justify-content:space-around;text-align:center;margin-top:8px"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${e.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${i.toFixed(2)}</b></div><div class="mut">结余<br><b style="font-size:18px">${(i-e).toFixed(2)}</b></div></div></div>`
-   +(ml.length?Object.keys(days).sort().reverse().map(d=>`<div class="row mut" style="margin:12px 0 6px"><span>${d.slice(5)} ${wk(d)}</span><span>${sum(days[d],'支出')?'支出 '+sum(days[d],'支出').toFixed(2):''}${sum(days[d],'收入')?'　收入 '+sum(days[d],'收入').toFixed(2):''}</span></div>`+days[d].map(billRow).join('')).join(''):'<p class="mut" style="text-align:center;padding:30px 0">这个月还没有记录，点右下角 + 记一笔</p>');
+   +(ml.length?Object.keys(days).sort().reverse().map(d=>`<div class="row mut" style="margin:12px 0 6px"><span>${d.slice(5)} ${wk(d)}</span><span>${sum(days[d],'支出')?'支出 '+sum(days[d],'支出').toFixed(2):''}${sum(days[d],'收入')?'　收入 '+sum(days[d],'收入').toFixed(2):''}</span></div>`+days[d].map(billRow).join('')).join(''):'<p class="mut" style="text-align:center;padding:30px 0">这个月还没有记录，点右下角 + 记一笔</p>')+foot;
  }
  const [s,e]=rangeOf(bRange,bAnchor),sl=ok.filter(b=>b.dt>=s&&b.dt<=e),ex=sl.filter(b=>b.kind==='支出'),te=sum(sl,'支出'),ti=sum(sl,'收入');
  const days=[];for(let d=new Date(s+'T00:00');iso(d)<=e;d.setDate(d.getDate()+1))days.push(iso(d));
@@ -905,7 +921,7 @@ function billView(){
  const lbl=bRange==='d'?s:bRange==='w'?s.slice(5)+' ~ '+e.slice(5):s.slice(0,7),n=days.length;
  return head+`<div class="card static"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">${seg(bRange,[['d','日'],['w','周'],['m','月']],'setRange')}<span><button class="btn o" onclick="shiftA(-1)">‹</button> <b>${lbl}</b> <button class="btn o" onclick="shiftA(1)">›</button></span></div>
  <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${te.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${ti.toFixed(2)}</b></div><div class="mut">日均支出<br><b style="font-size:18px">${(te/n).toFixed(2)}</b></div></div>${bars}</div>
- ${parts.length?`<div class="card static"><h3>支出构成</h3><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${donut(parts)}<div style="flex:1;min-width:140px">${parts.map(p=>`<div class="row" style="margin:3px 0"><span><span style="color:${p.c}">●</span> ${icon(p.n,'支出')} ${esc(p.n)}</span><span>${p.v.toFixed(2)} <span class="mut">${(p.v/te*100).toFixed(0)}%</span></span></div>`).join('')}</div></div></div>`:'<p class="mut" style="text-align:center;padding:30px 0">这段时间没有支出记录</p>'}`;
+ ${parts.length?`<div class="card static"><h3>支出构成</h3><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${donut(parts)}<div style="flex:1;min-width:140px">${parts.map(p=>`<div class="row" style="margin:3px 0"><span><span style="color:${p.c}">●</span> ${icon(p.n,'支出')} ${esc(p.n)}</span><span>${p.v.toFixed(2)} <span class="mut">${(p.v/te*100).toFixed(0)}%</span></span></div>`).join('')}</div></div></div>`:'<p class="mut" style="text-align:center;padding:30px 0">这段时间没有支出记录</p>'}`+foot;
 }
 function mapTap(e){
  if(!placing)return;
