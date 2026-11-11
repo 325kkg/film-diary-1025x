@@ -677,11 +677,34 @@ function afterZoom(){
  loadCities(p.a);
  if(z>=7&&cities[p.a]){const c=under(cities[p.a],cx,cy);if(c)loadCities(c.a)}
 }
-function openPhotos(id){
+function openPhotosOld(id){
  const v=items[id]||{},base=(v.fn||'').replace(/\.[^.]+$/,''),useName=/\d{3,}/.test(base)&&base.length>3,t=useName?base:(v.date||'');
  try{navigator.clipboard.writeText(t)}catch(e){}
  toast(useName?'已复制文件名 '+t+'，到相册搜索栏粘贴即可找到这张':'已复制日期 '+t+'，请在相册里按日期查找');
  setTimeout(()=>{location.href='photos-redirect://'},1200);
+}
+function openPhotos(id){
+ const v=items[id]||{};
+ if(/^\d{4}:\d\d:\d\d \d\d:\d\d/.test(v.time||'')){let ok='';try{ok=localStorage.getItem('scok')}catch(e){}return ok==='1'?runFind(id):findGuide(id)}
+ toast('这张照片没有记录拍摄时间，改用文件名/日期查找');openPhotosOld(id);
+}
+function runFind(id){
+ const t=items[id].time.slice(0,19).replace(/^(\d{4}):(\d\d):(\d\d)/,'$1-$2-$3');
+ location.href='shortcuts://run-shortcut?name='+encodeURIComponent('找照片')+'&input=text&text='+encodeURIComponent(t);
+}
+function scDone(id){try{localStorage.setItem('scok','1')}catch(e){}$('#dlg').close();runFind(id)}
+function findGuide(id){
+ showDlg(`<h3>📲 一键找到相册里的这张照片</h3><p class="mut">网页没法直接打开相册里的某一张，但可以让 iPhone 自带的“快捷指令”按拍摄时间去找。只需要建一次：</p>
+ <ol style="padding-left:18px;margin:6px 0">
+ <li>打开“快捷指令”App，右上角点 <b>＋</b> 新建，名字改成 <b>找照片</b>（必须一模一样）。</li>
+ <li>点“添加操作”，搜索并添加 <b>从输入中获取日期</b>，输入保持“快捷指令输入”。</li>
+ <li>再添加 <b>调整日期</b>：日期选上一步的“日期”，选 <b>减去 1 分钟</b>。再添加 <b>设定变量</b>，名字填 <b>开始</b>。</li>
+ <li>再添加一个 <b>调整日期</b>：日期仍选第 2 步的“日期”，选 <b>加上 1 分钟</b>。再添加 <b>设定变量</b>，名字填 <b>结束</b>。</li>
+ <li>添加 <b>查找照片</b>：点“添加过滤器”，选 <b>拍摄日期</b> → <b>介于</b>，两个框分别选变量“开始”和“结束”。</li>
+ <li>最后添加 <b>快速查看</b>，输入选“照片”。点“完成”。</li>
+ </ol>
+ <p class="mut">第一次运行时，手机会问是否允许快捷指令访问照片，选“允许”。之后在照片卡片点“在相册中找”，就会跳到快捷指令并直接显示那张照片（前后一分钟内连拍的也会一起出现）。</p>
+ <p style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap"><button class="btn o" onclick="$('#dlg').close()">关闭</button>${id?`<button class="btn o" onclick="$('#dlg').close();openPhotosOld('${id}')">先用文件名搜</button><button class="btn" onclick="scDone('${id}')">我建好了，试一下</button>`:''}</p>`);
 }
 let fmap=null,fEl=null,fLayers=[],fMks=[],fSig='',fPh=[],fSlot={},fVis={vp:new Set(),vc:new Set(),vd:new Set()};
 function drawLines(){
@@ -824,7 +847,7 @@ function photoView(){
   const sx=SL[bi][0],sy=SL[bi][1];fSlot[v.id]=[sx+80,sy+95];
   return `<div class="ft" style="left:${sx/10}%;top:${sy/11}%;transform:rotate(${(n%5-2)*1.2}deg)" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="">`:''}<div>${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,7))}</div></div>`}).join('');
  const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
- return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片</div>
+ return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片<div class="mut" style="margin-top:4px"><a href="#" onclick="findGuide();return false" style="color:var(--acc)">📲 设置“在相册中找”快捷指令</a></div></div>
  <div id="fwrap" style="position:relative;width:100%;padding-top:110%;background:var(--card);border:1px solid var(--line);border-radius:4px"><div id="fslot" style="position:absolute;left:20%;top:22.7%;width:60%;height:54.5%"><div class="mapph" style="height:100%;aspect-ratio:auto">🗺️ 地图加载中…</div></div><button class="locb" style="top:8px;right:8px;z-index:6;width:auto;border-radius:18px;padding:0 14px;font-size:14px" onclick="openFull()">⛶ 全屏地图</button><svg id="flines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></svg>${tiles}</div>
  <p class="mut" style="text-align:center">点右上角“全屏地图”可以大图查看、放大到街道，照片会以缩略图标在地图上，靠得近的会合并成数字</p>${wall}`;
 }
