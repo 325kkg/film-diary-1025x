@@ -467,11 +467,27 @@ function pickPoi(i){
 }
 function navApple(id){const v=items[id];location.href=v.lng!=null?`https://maps.apple.com/?daddr=${v.lat},${v.lng}&dirflg=d`:`https://maps.apple.com/?daddr=${encodeURIComponent((v.addr||'')+' '+v.name)}&dirflg=d`}
 function navAmap(id){const v=items[id];if(v.lng==null)return;location.href=`https://uri.amap.com/navigation?to=${v.lng},${v.lat},${encodeURIComponent(v.name)}&mode=car&coordinate=gaode&callnative=1`}
-let foodFull=false,fdMore=false;
+let foodFull=false,fdMore=false,fq='';
+function foodMatches(q){
+ q=(q||'').trim().toLowerCase();if(!q)return [];
+ return Object.entries(items).filter(([k,v])=>v&&v.type==='food'&&[v.name,v.addr,v.cuisine,v.city,v.note].join(' ').toLowerCase().includes(q)).map(([k,v])=>({id:k,...v})).slice(0,8);
+}
+function foodRes(){
+ const L=foodMatches(fq);if(!fq.trim())return '';
+ if(!L.length)return '<div class="mut" style="padding:8px 4px">没有找到已标记的美食</div>';
+ return L.map(v=>`<div onclick="pickFood('${v.id}')" style="padding:8px 4px;border-bottom:1px dashed var(--line);cursor:pointer"><b>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</b> <span style="color:var(--acc)">${esc(v.star||'')}</span>${v.kind==='吃过'?` <span class="tag">吃过 ${eatN(v)} 次</span>`:''}<div class="mut">${esc(v.cuisine||'')} ${(v.lng!=null||v.x!=null)?'📍':'· 未定位'} ${esc(shortAddr(v.addr))}</div></div>`).join('');
+}
+function foodSearch(v){fq=v;const e=$('#fsr');if(e)e.innerHTML=foodRes()}
+function ffSearch(v){fq=v;const e=$('#ffr');if(e){e.innerHTML=foodRes();e.style.display=v.trim()?'block':'none'}}
+function pickFood(id){
+ sel=null;
+ if(foodFull){const e=$('#ffr');if(e){e.innerHTML='';e.style.display='none'}const q=$('#ffq');if(q){q.value='';q.blur()}fq='';selPin(id);return}
+ selPin(id);setTimeout(()=>{const m=$('#mapslot');if(m)m.scrollIntoView({behavior:'smooth',block:'start'})},60);
+}
 function openFoodFull(){
  if(!amap||!mEl||!plugReady){toast('地图还没加载好，请稍等');return}
  let o=$('#ffull');
- if(!o){o=document.createElement('div');o.id='ffull';o.innerHTML='<div id="ffslot" style="position:absolute;inset:0"></div><div id="ffbar"><button class="btn" onclick="closeFoodFull()">✕ 关闭</button><span style="background:rgba(0,0,0,.6);color:#fff;padding:5px 12px;border-radius:14px;font-size:13px">点标记看详情和导航</span></div><div id="fdet"></div><button class="locb" style="top:calc(10px + env(safe-area-inset-top,0px))" onclick="goMe()">◎</button>';document.body.appendChild(o)}
+ if(!o){o=document.createElement('div');o.id='ffull';o.innerHTML='<div id="ffslot" style="position:absolute;inset:0"></div><div id="ffbar"><button class="btn" onclick="closeFoodFull()">✕ 关闭</button><input id="ffq" placeholder="🔍 搜已标记的美食" oninput="ffSearch(this.value)" style="flex:1;background:var(--card);border-radius:18px;padding:7px 12px"></div><div id="ffr" style="display:none;position:absolute;left:12px;right:12px;top:calc(60px + env(safe-area-inset-top,0px));max-height:42%;overflow:auto;background:var(--card);border:2px solid var(--ink);border-radius:8px;padding:2px 10px;z-index:7"></div><div id="fdet"></div><button class="locb" style="top:calc(10px + env(safe-area-inset-top,0px))" onclick="goMe()">◎</button>';document.body.appendChild(o)}
  foodFull=true;fdMore=false;o.classList.add('on');$('#fdet').style.display='none';
  $('#ffslot').appendChild(mEl);mEl.style.aspectRatio='auto';mEl.style.width='100%';mEl.style.height='100%';mEl.style.border='0';mEl.style.borderRadius='0';
  fRes();setTimeout(()=>{mSig='';drawMarkers()},350);
@@ -496,7 +512,7 @@ function foodView(){
  const res=sres.map((p,i)=>`<div class="card" onclick="pickPoi(${i})"><b>${esc(p.name)}</b><div class="mut">${esc((p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''))}</div></div>`).join('');
  return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
  <div style="display:flex;gap:6px;margin-bottom:8px">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}</div>
- ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<div style="text-align:right;margin-bottom:6px"><button class="btn o" onclick="openEatStats()">📊 吃过统计</button> <button class="btn o" onclick="openFoodFull()">⛶ 全屏地图</button></div><div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
+ ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<input id="fsq" placeholder="🔍 搜已标记的美食（店名/菜系/地址）" value="${esc(fq)}" oninput="foodSearch(this.value)"><div id="fsr" style="margin-bottom:6px">${foodRes()}</div><div style="text-align:right;margin-bottom:6px"><button class="btn o" onclick="openEatStats()">📊 吃过统计</button> <button class="btn o" onclick="openFoodFull()">⛶ 全屏地图</button></div><div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
  <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p><p class="mut" id="tmline" style="font-size:11px;margin-top:-6px">${tmText()}</p>
  ${s?card({...s,id:sel}):''}
  ${a.length?a.map(card).join(''):empty()}`;
@@ -948,8 +964,16 @@ function drawSheet(){
  ${QN.length?`<div style="display:flex;gap:6px;overflow-x:auto;margin:0 0 8px">${QN.map((x,i)=>`<button class="btn o" style="flex:none;padding:3px 9px;font-size:12px" onclick="qn(${i})">${esc(x.note)}</button>`).join('')}</div>`:''}
  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><select onchange="bd.acct=this.value" style="width:auto">${['',...ACC].map(a=>`<option value="${a}" ${a===v.acct?'selected':''}>${a||'选择账户'}</option>`).join('')}</select><input type="date" value="${v.dt}" onchange="bd.dt=this.value" style="width:auto"><label style="margin:0;display:flex;align-items:center;gap:4px;color:var(--ink)"><input type="checkbox" ${v.shared?'checked':''} onchange="bd.shared=this.checked;drawSheet()"> 共同</label>${v.shared?`<select onchange="bd.owner=this.value" style="width:auto">${MEM.map(m=>`<option value="${m.uid}" ${m.uid===v.owner?'selected':''}>${esc(m.name)} 付</option>`).join('')}</select>`:''}</div>
  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input placeholder="点此输入备注…" value="${esc(v.note)}" oninput="bd.note=this.value"><b id="bamt" style="font-size:26px;color:var(--acc);min-width:100px;text-align:right">${v.amt||'0.00'}</b></div>
- <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${ks.map(k=>`<button class="btn ${'保存'===k?'':'o'}" style="padding:12px 0;font-size:18px" onclick="key('${k}')">${k}</button>`).join('')}</div>
+ <div id="kpad" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${ks.map(k=>`<button class="btn ${'保存'===k?'':'o'}" style="padding:12px 0;font-size:18px" data-k="${k}">${k}</button>`).join('')}</div>
  ${v.id?`<p class="mut">记录人：${esc(bn(v.owner))}（你们两人都可以修改或删除）</p><p style="text-align:right"><button class="btn o" onclick="delBill()">删除这笔</button></p>`:''}`;
+ bindPad();
+}
+function bindPad(){
+ const kp=$('#kpad');if(!kp)return;let tm=null,iv=null;
+ const stop=()=>{clearTimeout(tm);clearInterval(iv)};
+ kp.addEventListener('pointerdown',e=>{const b=e.target.closest('[data-k]');if(!b)return;const k=b.dataset.k;if(k==='保存'||k==='再记')return;e.preventDefault();b._t=Date.now();key(k);if(k==='⌫'){stop();tm=setTimeout(()=>{iv=setInterval(()=>key('⌫'),90)},450)}});
+ ['pointerup','pointercancel','pointerleave'].forEach(n=>kp.addEventListener(n,stop));
+ kp.addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(!b)return;if(b._t&&Date.now()-b._t<900)return;key(b.dataset.k)});
 }
 function key(k){
  if(k==='保存')return saveBill(false);if(k==='再记')return saveBill(true);
