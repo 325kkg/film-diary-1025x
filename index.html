@@ -468,11 +468,20 @@ function gcj2wgs(lng,lat){
  return [wl,wt];
 }
 const appleXY=v=>{const w=gcj2wgs(Number(v.lng),Number(v.lat));return w[1].toFixed(6)+','+w[0].toFixed(6)};
+const AMODES=[['name','按店名+地址搜索'],['gcj','高德坐标'],['wgs','GPS坐标']];
+let amode='name';try{amode=localStorage.getItem('amode')||'name'}catch(e){}
+function appleDest(v){
+ let m=v.lng!=null?amode:'name';
+ if(m==='gcj')return v.lat+','+v.lng;
+ if(m==='wgs')return appleXY(v);
+ return encodeURIComponent(((v.name||'')+' '+shortAddr(v.addr)).trim());
+}
+function cycleAmode(){const i=AMODES.findIndex(x=>x[0]===amode);amode=AMODES[(i+1)%AMODES.length][0];try{localStorage.setItem('amode',amode)}catch(e){}toast('Apple 导航改为：'+AMODES.find(x=>x[0]===amode)[1]);render()}
 function navLinks(v){
  const nm=encodeURIComponent(v.name||''),st='text-decoration:none;display:inline-block';
- const ap=v.lng!=null?`maps://?daddr=${appleXY(v)}&amp;dirflg=d`:`maps://?daddr=${encodeURIComponent(shortAddr(v.addr)+' '+(v.name||''))}&amp;dirflg=d`;
+ const ap=`maps://?daddr=${appleDest(v)}&amp;dirflg=d`;
  const am=v.lng!=null?` <a class="btn o" style="${st}" href="https://uri.amap.com/navigation?to=${v.lng},${v.lat},${nm}&amp;mode=car&amp;coordinate=gaode&amp;callnative=1" onclick="event.stopPropagation()">高德导航</a>`:'';
- return `<div style="margin-top:6px;clear:both"><a class="btn o" style="${st}" href="${ap}" onclick="event.stopPropagation()">🧭 Apple 地图导航</a>${am}</div>`;
+ return `<div style="margin-top:6px;clear:both"><a class="btn o" style="${st}" href="${ap}" onclick="event.stopPropagation()">🧭 Apple 地图导航</a>${am}<div class=\"mut\" style=\"font-size:12px;margin-top:4px\">Apple 当前用：${AMODES.find(x=>x[0]===(v.lng!=null?amode:'name'))[1]} · <a href=\"#\" onclick=\"event.stopPropagation();cycleAmode();return false\" style=\"color:var(--acc)\">位置不准？换一种</a></div></div>`;
 }
 function searchShop(){
  lastQ=$('#sq').value.trim();if(!lastQ||!window.AMap||!AMap.PlaceSearch)return;
