@@ -458,9 +458,19 @@ function pickTip(i){
  const t=tips[i];if(!t)return;tips=[];const e=$('#tips');if(e)e.innerHTML='';
  openForm('food',null,{lng:t.location.lng,lat:t.location.lat,pre:{name:t.name,addr:(t.district||'')+(typeof t.address==='string'?t.address:''),kind:'想吃'}});
 }
+function gcj2wgs(lng,lat){
+ const a=6378245.0,ee=0.00669342162296594323,PI=Math.PI;
+ if(lng<72.004||lng>137.8347||lat<0.8293||lat>55.8271)return [lng,lat];
+ const tl=(x,y)=>{let r=-100+2*x+3*y+.2*y*y+.1*x*y+.2*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*PI)+20*Math.sin(2*x*PI))*2/3;r+=(20*Math.sin(y*PI)+40*Math.sin(y/3*PI))*2/3;r+=(160*Math.sin(y/12*PI)+320*Math.sin(y*PI/30))*2/3;return r};
+ const tg=(x,y)=>{let r=300+x+2*y+.1*x*x+.1*x*y+.1*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*PI)+20*Math.sin(2*x*PI))*2/3;r+=(20*Math.sin(x*PI)+40*Math.sin(x/3*PI))*2/3;r+=(150*Math.sin(x/12*PI)+300*Math.sin(x/30*PI))*2/3;return r};
+ const delta=(lg,lt)=>{let dl=tl(lg-105,lt-35),dg=tg(lg-105,lt-35);const rl=lt/180*PI;let m=Math.sin(rl);m=1-ee*m*m;const sm=Math.sqrt(m);dl=dl*180/((a*(1-ee))/(m*sm)*PI);dg=dg*180/(a/sm*Math.cos(rl)*PI);return [dg,dl]};
+ let wl=lng,wt=lat;for(let i=0;i<5;i++){const [dg,dl]=delta(wl,wt);wl=lng-dg;wt=lat-dl}
+ return [wl,wt];
+}
+const appleXY=v=>{const w=gcj2wgs(Number(v.lng),Number(v.lat));return w[1].toFixed(6)+','+w[0].toFixed(6)};
 function navLinks(v){
  const nm=encodeURIComponent(v.name||''),st='text-decoration:none;display:inline-block';
- const ap=v.lng!=null?`maps://?daddr=${v.lat},${v.lng}&amp;dirflg=d`:`maps://?daddr=${encodeURIComponent(shortAddr(v.addr)+' '+(v.name||''))}&amp;dirflg=d`;
+ const ap=v.lng!=null?`maps://?daddr=${appleXY(v)}&amp;dirflg=d`:`maps://?daddr=${encodeURIComponent(shortAddr(v.addr)+' '+(v.name||''))}&amp;dirflg=d`;
  const am=v.lng!=null?` <a class="btn o" style="${st}" href="https://uri.amap.com/navigation?to=${v.lng},${v.lat},${nm}&amp;mode=car&amp;coordinate=gaode&amp;callnative=1" onclick="event.stopPropagation()">高德导航</a>`:'';
  return `<div style="margin-top:6px;clear:both"><a class="btn o" style="${st}" href="${ap}" onclick="event.stopPropagation()">🧭 Apple 地图导航</a>${am}</div>`;
 }
@@ -472,7 +482,7 @@ function pickPoi(i){
  const p=sres[i];sres=[];
  openForm('food',null,{lng:p.location.lng,lat:p.location.lat,pre:{name:p.name,addr:(p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''),kind:'想吃'}});
 }
-function navApple(id){const v=items[id];location.href=v.lng!=null?`https://maps.apple.com/?daddr=${v.lat},${v.lng}&dirflg=d`:`https://maps.apple.com/?daddr=${encodeURIComponent((v.addr||'')+' '+v.name)}&dirflg=d`}
+function navApple(id){const v=items[id];location.href=v.lng!=null?`https://maps.apple.com/?daddr=${appleXY(v)}&dirflg=d`:`https://maps.apple.com/?daddr=${encodeURIComponent((v.addr||'')+' '+v.name)}&dirflg=d`}
 function navAmap(id){const v=items[id];if(v.lng==null)return;location.href=`https://uri.amap.com/navigation?to=${v.lng},${v.lat},${encodeURIComponent(v.name)}&mode=car&coordinate=gaode&callnative=1`}
 let foodFull=false,fdMore=false,fq='';
 function foodMatches(q){
