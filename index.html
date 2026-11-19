@@ -40,6 +40,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px 90px}
 h3{margin:0 0 6px;font:700 15px "Courier New","Songti SC",monospace;letter-spacing:1px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .stars{display:inline-block;background:linear-gradient(90deg,var(--acc) var(--p),rgba(128,128,128,.4) var(--p));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.newb{position:absolute;top:4px;left:4px;background:#d93025;color:#fff;font:700 11px/1 sans-serif;padding:3px 6px;border-radius:9px;z-index:3;pointer-events:none;box-shadow:0 0 0 2px var(--bg)}
 .pcnt{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;font:700 11px/1 sans-serif;padding:3px 6px;border-radius:9px;z-index:2}
 .pol{position:relative;background:var(--pol);padding:8px 8px 10px;box-shadow:2px 4px 8px rgba(0,0,0,.25);transform:rotate(var(--r,0deg));cursor:pointer}
 .pol img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:sepia(.35) contrast(1.05)}
@@ -128,7 +129,7 @@ const start=()=>meta&&meta.start;
 const dayN=d=>start()?Math.round((new Date(d+'T00:00')-new Date(start()+'T00:00'))/864e5)+1:null;
 
 function toast(m){const e=document.createElement('div');e.className='toast';e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
-async function save(id,d){if(d&&d.type&&ME)d.ed=ME.name;items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
+async function save(id,d){if(d&&d.type&&ME){d.ed=ME.name;if(!items[id]&&!d.ca)d.ca=new Date().toISOString()}items[id]=d;render();if(col)try{await col.doc(id).set(d)}catch(e){toast('保存失败：'+(e.message||e.code))}else warn='未连接共享存储，数据不会保存'}
 async function del(id){delete items[id];render();if(col)try{await col.doc(id).delete()}catch(e){toast('删除失败')}}
 
 const urlP=new URLSearchParams(location.search);let urlAdd=urlP.get('add')?{amt:(urlP.get('amt')||'').replace(/[^0-9.]/g,''),m:urlP.get('m')||'',src:urlP.get('src')||''}:null;
@@ -293,6 +294,33 @@ function setup(edit){
  save('meta',{a:A,b:B,start:S});
 }
 
+const readSet=new Set(),newSince={};let prevTab=null;
+const ID_RE=/(?:openForm\('[a-z]+',|openLetter\(|openBill\(|openGoal\(|pickFood\()'([^']+)'/;
+function newKind(id){
+ const ns=newSince[tab];if(!ns||!ME||readSet.has(id))return '';
+ const t0=Date.parse(ns),v=items[id];
+ if(v&&v.type){
+  if(BTAB[v.type]!==tab)return '';
+  const other=x=>{const e=x.ed||x.by;return e&&e!==ME.name};
+  if(v.type==='goal'&&rec('dep').some(d=>d.goal===id&&other(d)&&Date.parse(vers[d.id]||0)>t0))return '改';
+  if(!other(v)||!vers[id]||!(Date.parse(vers[id])>t0))return '';
+  return v.ca&&Date.parse(v.ca)>t0?'新':'改';
+ }
+ const b=bills.find(x=>x.id===id);
+ if(b&&tab==='bill'){const ed=b.editor||b.owner,u=Date.parse(b.updated_at||b.created_at);if(ed===ME.uid||!(u>t0))return '';return Date.parse(b.created_at)>t0?'新':'改'}
+ return '';
+}
+function markNew(){
+ const root=$('#app');if(!root||!ME)return;
+ root.querySelectorAll('[onclick]').forEach(el=>{
+  if(el.querySelector(':scope > .newb'))return;
+  const m=ID_RE.exec(el.getAttribute('onclick')||'');if(!m)return;
+  const k=newKind(m[1]);if(!k)return;
+  if(getComputedStyle(el).position==='static')el.style.position='relative';
+  const b=document.createElement('span');b.className='newb';b.textContent=k;el.appendChild(b);
+  el.addEventListener('click',()=>{readSet.add(m[1]);b.remove()});
+ });
+}
 const BTAB={event:'tl',diary:'diary',photo:'photo',letter:'letter',plan:'plan',goal:'plan',dep:'plan',food:'food',mood:'mood',fight:'fight'},BTABS=['tl','diary','photo','letter','plan','food','mood','fight','bill'];
 let seen={};try{seen=JSON.parse(localStorage.getItem('seen')||'{}')}catch(e){}
 function persistSeen(){try{localStorage.setItem('seen',JSON.stringify(seen))}catch(e){}}
@@ -309,6 +337,7 @@ function render(){
  if(!ready)return;
  if(touching){pend=true;return}
  if(!unlockedNow()){$('#nav').innerHTML='';$('#fab').style.display='none';$('#sub').textContent=warn||'LOCKED';$('#ttl').textContent='我们的胶片日记';$('#app').innerHTML=loginView();return}
+ if(prevTab!==tab){if(prevTab)delete newSince[prevTab];prevTab=tab;if(BTABS.includes(tab))newSince[tab]=seen[tab]||seen._b||new Date().toISOString()}
  if(meta&&BTABS.includes(tab))markSeen(tab);
  const BG=badges();
  $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${i} ${n}${BG[k]?`<span class="bdg">${BG[k]>99?'99+':BG[k]}</span>`:''}</button>`).join('');
@@ -316,6 +345,7 @@ function render(){
  $('#sub').textContent=warn||(meta?'SINCE '+meta.start:'LOVE FILM JOURNAL');
  $('#fab').style.display=meta&&tab!=='home'&&tab!=='year'?'':'none';
  $('#app').innerHTML=pwBanner()+view();mountMap();if(foodFull){if(sel&&items[sel])showFD(sel);else fdClose()}
+markNew();
 }
 function go(k){tab=k;render();scrollTo(0,0)}
 $('#fab').onclick=()=>{if(tab==='bill'){openBill();return}if(tab==='plan'&&pTab==='goal'){goalForm();return}if(tab==='food'&&AMAP.key){const q=$('#sq');if(q){q.scrollIntoView({block:'center'});q.focus();return}}openForm(tab==='tl'?'event':tab)};
@@ -1020,8 +1050,8 @@ async function saveBill(again){
 }
 async function delBill(){if(!confirm('确定删除这笔吗？'))return;try{await rest('bills?id=eq.'+bd.id,{method:'DELETE'})}catch(e){toast('删除失败');return}$('#dlg').close();bSig='';await loadBills();render()}
 const setScope=k=>{bScope=k;render()},setBTab=k=>{bTab=k;render()},setRange=k=>{bRange=k;render()};
-function setQ(v){bQ=v;const e=$('#blist');if(e)e.innerHTML=listHTML()}
-function setCF(v){bCF=v;const e=$('#blist');if(e)e.innerHTML=listHTML()}
+function setQ(v){bQ=v;const e=$('#blist');if(e)e.innerHTML=listHTML();markNew()}
+function setCF(v){bCF=v;const e=$('#blist');if(e)e.innerHTML=listHTML();markNew()}
 function shiftBM(n){bMonth=mAdd(bMonth,n);render()}
 function shiftA(n){const d=new Date(bAnchor+'T00:00');if(bRange==='d')d.setDate(d.getDate()+n);else if(bRange==='w')d.setDate(d.getDate()+7*n);else if(bRange==='y')d.setFullYear(d.getFullYear()+n,0,1);else d.setMonth(d.getMonth()+n,1);bAnchor=iso(d);render()}
 function rangeOf(r,a){const d=new Date(a+'T00:00');if(r==='d')return [a,a];
