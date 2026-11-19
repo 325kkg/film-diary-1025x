@@ -1020,7 +1020,7 @@ function donut(parts){
 const pbar=(s,t)=>{const p=t>0?s/t*100:0,c=p>=100?'#b5482f':p>=80?'#e0a65a':'#7d8f4e';return `<div style="height:8px;border:1px solid var(--ink);border-radius:4px;overflow:hidden;margin:3px 0"><div style="height:100%;width:${Math.min(100,p)}%;background:${c}"></div></div>`};
 const bgName=k=>k==='shared'?'共同':(ME&&k===ME.uid?'我的':'TA的');
 function bgGet(k){const B=items.budget||{},x=(B.b||{})[k];if(x)return x;if(k==='shared'&&!B.b&&(B.total>0||Object.keys(B.cats||{}).length))return {total:B.total,cats:B.cats||{}};return null}
-const bgSpend=k=>bills.filter(b=>b.kind==='支出'&&b.dt.startsWith(bMonth)&&(k==='shared'?b.shared:(!b.shared&&b.owner===k)));
+const bgSpend=k=>bills.filter(b=>b.kind==='支出'&&b.dt.startsWith(bMonth)&&(k==='shared'?b.shared:b.owner===k));
 function budgetCard(){
  if(!ME)return '';const ta=(MEM.find(m=>m.uid!==ME.uid)||{}).uid;
  const K={all:['shared',ME.uid,ta],shared:['shared'],me:[ME.uid],ta:[ta]}[bScope]||['shared'];
@@ -1030,13 +1030,14 @@ function budgetOne(k){
  const B=bgGet(k),nm=bgName(k);
  if(!B||!(B.total>0||Object.keys(B.cats||{}).length))return `<p style="text-align:center;margin:6px 0"><button class="btn o" onclick="openBudget('${k}')">🎯 设置${nm}预算</button></p>`;
  const ex=bgSpend(k),tot=sum(ex,'支出');let h=`<div class="card static"><div class="row"><h3>🎯 ${nm}预算（本月）</h3><button class="btn o" onclick="openBudget('${k}')">修改</button></div>`;
+ if(k!=='shared'){const ps=sum(ex.filter(b=>!b.shared),'支出'),sh=sum(ex.filter(b=>b.shared),'支出');h+=`<div class="mut" style="margin-bottom:4px">个人 ¥${ps.toFixed(0)} + 共同（${k===(ME&&ME.uid)?'我':'TA'}付的）¥${sh.toFixed(0)} = ¥${tot.toFixed(0)}</div>`}
  if(B.total>0)h+=`<div class="row"><span>总支出 ¥${tot.toFixed(0)} / ¥${B.total}</span><b style="color:${tot>B.total?'#b5482f':'var(--ink)'}">${tot>B.total?'超 ¥'+(tot-B.total).toFixed(0):'剩 ¥'+(B.total-tot).toFixed(0)}</b></div>${pbar(tot,B.total)}`;
  Object.entries(B.cats||{}).forEach(([c,v])=>{const s=sum(ex.filter(b=>b.cat===c),'支出');h+=`<div class="row mut" style="margin-top:4px"><span>${icon(c,'支出')} ${esc(c)} ¥${s.toFixed(0)} / ¥${v}</span><span>${s>v?'超 ¥'+(s-v).toFixed(0):'剩 ¥'+(v-s).toFixed(0)}</span></div>${pbar(s,v)}`});
  return h+'</div>';
 }
 function openBudget(k){
  const B=bgGet(k)||{},nm=bgName(k);
- showDlg(`<h3>🎯 ${nm}预算</h3><p class="mut">${k==='shared'?'统计“共同”账单的支出。':'统计这个人的“个人”账单（不含共同账单）。'}你们两个人都可以看和修改。留空表示不设，总预算和分类预算可以只设一部分。</p><label>每月总预算（元）</label><input id="bt" type="number" inputmode="decimal" value="${B.total||''}">${EXP.map(([n,i])=>`<label>${i} ${n}</label><input class="bc" data-c="${n}" type="number" inputmode="decimal" value="${(B.cats||{})[n]||''}">`).join('')}<p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">取消</button> <button class="btn" onclick="saveBudget('${k}')">保存</button></p>`);
+ showDlg(`<h3>🎯 ${nm}预算</h3><p class="mut">${k==='shared'?'只统计“共同”账单的支出（两个人付的都算）。':'统计这个人本月的全部支出：个人账单，加上他/她付的共同账单。'}你们两个人都可以看和修改。留空表示不设，总预算和分类预算可以只设一部分。</p><label>每月总预算（元）</label><input id="bt" type="number" inputmode="decimal" value="${B.total||''}">${EXP.map(([n,i])=>`<label>${i} ${n}</label><input class="bc" data-c="${n}" type="number" inputmode="decimal" value="${(B.cats||{})[n]||''}">`).join('')}<p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">取消</button> <button class="btn" onclick="saveBudget('${k}')">保存</button></p>`);
 }
 function saveBudget(k){
  const cats={};document.querySelectorAll('#dlg .bc').forEach(e=>{const v=parseFloat(e.value);if(v>0)cats[e.dataset.c]=v});
