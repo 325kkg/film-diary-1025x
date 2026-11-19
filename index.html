@@ -39,6 +39,7 @@ main{max-width:640px;margin:0 auto;padding:14px 14px 90px}
 .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 h3{margin:0 0 6px;font:700 15px "Courier New","Songti SC",monospace;letter-spacing:1px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stars{display:inline-block;background:linear-gradient(90deg,var(--acc) var(--p),rgba(128,128,128,.4) var(--p));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
 .pcnt{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;font:700 11px/1 sans-serif;padding:3px 6px;border-radius:9px;z-index:2}
 .pol{position:relative;background:var(--pol);padding:8px 8px 10px;box-shadow:2px 4px 8px rgba(0,0,0,.25);transform:rotate(var(--r,0deg));cursor:pointer}
 .pol img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:sepia(.35) contrast(1.05)}
@@ -116,7 +117,7 @@ const T={
  place:{n:'足迹',i:'🍜',f:[['kind','类型','s',['吃过','去过']],['name','店名/地点','t'],['city','城市','t'],['date','日期','d'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['note','感受','a']]},
  mood:{n:'心情',i:'🌤️',f:[['date','日期','d'],['score','今天的心情','s',MO],['tag','因为','s',['日常','工作学习','约会','吵架','旅行','身体','其他']],['inten','强度','s',['轻微','一般','明显','强烈']],['note','想说的话','a']]},
  fight:{n:'吵架复盘',i:'🩹',f:[['date','日期','d'],['level','严重程度','s',['小摩擦','有点气','比较严重','很严重']],['cause','起因（发生了什么）','a'],['feelA','我当时的感受','a'],['feelB','TA 当时的感受（猜测或问过后填）','a'],['need','我们各自真正想要的','a'],['fix','怎么和好的','a'],['dur','和好用了多久','s',['当天','1天','2-3天','一周以上','还没和好']],['learn','下次怎么做','a'],['promise','我们的约定','a']]},
- food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['addr','地址','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['star','评分','s',['★','★★','★★★','★★★★','★★★★★']],['date','日期（吃过的填）','d'],['note','感受/备注','a'],['img','店铺照片（可选）','p']]}
+ food:{n:'美食地图',i:'🗺️',f:[['name','店名','t'],['addr','地址','t'],['kind','状态','s',['想吃','吃过']],['cuisine','菜系/推荐菜','t'],['price','人均','t'],['rate','评分（0–5，可精确到小数点后一位）','r'],['date','日期（吃过的填）','d'],['note','感受/备注','a'],['img','店铺照片（可选）','p']]}
 };
 const NAV=[['home','🏠','首页'],['bill','💰','记账'],['tl','🎞️','时间轴'],['diary','📖','日记'],['photo','📷','照片足迹'],['letter','💌','信箱'],['plan','🎟️','计划'],['food','🗺️','美食地图'],['mood','🌤️','心情'],['fight','🩹','复盘'],['year','🎬','年度回顾']];
 let items={},meta=null,tab='home',col=null,cur={},ready=false,warn='',H0='',uh='',myid='',placing=null,sel=null,ff='全部';
@@ -223,7 +224,7 @@ function card(v){
  if(v.type==='mood')h=`<div class="row"><h3><span style="font-size:24px">${MO[v.score]||''}</span> ${esc(v.date)}</h3>${by}</div><div class="mut">${v.tag?`<span class="tag">${esc(v.tag)}</span>`:''}${esc(v.inten||'')}</div>${body('note')}`;
  if(v.type==='fight'){const sc=(l,k)=>v[k]?`<div style="margin-top:4px"><span class="tag">${l}</span>${esc(v[k])}</div>`:'';
  h=`<div class="row"><h3>🩹 ${esc(v.date)} ${v.level?`<span class="tag">${esc(v.level)}</span>`:''}</h3>${by}</div>${sc('起因','cause')}${sc('我的感受','feelA')}${sc('TA的感受','feelB')}${sc('真正想要','need')}${sc('和好','fix')}${sc('下次','learn')}${sc('约定','promise')}${v.dur?`<div class="stamp" style="margin-top:6px">和好用时：${esc(v.dur)}</div>`:''}`}
- if(v.type==='food')h=`${v.img?`<img src="${v.img}" alt="" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:6px;float:right;margin-left:8px">`:''}<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?esc(v.star||''):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(shortAddr(v.addr))} ${by}</div>${eatBar(v)}${body('note')}${navLinks(v)}`;
+ if(v.type==='food')h=`${v.img?`<img src="${v.img}" alt="" loading="lazy" style="width:54px;height:54px;object-fit:cover;border-radius:6px;float:right;margin-left:8px">`:''}<div class="row"><h3>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</h3><span style="color:var(--acc)">${v.kind==='吃过'?stars(v):''}</span></div><div class="mut">${esc(v.cuisine||'')} ${v.price?'· 人均'+esc(v.price):''} ${esc(v.date||'')} ${v.x!=null||v.lng!=null?'📍':''} ${esc(shortAddr(v.addr))} ${by}</div>${eatBar(v)}${body('note')}${navLinks(v)}`;
  return `<div class="card" onclick="openForm('${v.type}','${v.id}')">${h}</div>`;
 }
 
@@ -329,6 +330,7 @@ function openForm(type,id,pos){
   if(kind==='d')return `<label>${l}</label><input type="date" data-k="${k}" value="${esc(v)}">`;
   if(kind==='c')return `<label><input type="checkbox" data-k="${k}" ${v?'checked':''}> ${l}</label>`;
   if(kind==='s')return `<label>${l}</label><select data-k="${k}" data-s="1">${o.map((x,i)=>`<option value="${i}" ${(k==='score'?String(v===''?3:v)===String(i):v===x)?'selected':''}>${x}</option>`).join('')}</select>`;
+  if(kind==='r'){const r=rt(d);return `<label>${l}</label><div style="display:flex;gap:8px;align-items:center"><input type="range" min="0" max="5" step="0.1" value="${r}" oninput="rateSync(this.value)" style="flex:1"><input type="number" step="0.1" min="0" max="5" inputmode="decimal" data-k="${k}" id="rtn" value="${r||''}" oninput="rateSync(this.value,1)" style="width:84px"></div><div id="rtp" style="font-size:24px;margin-top:4px">${stars({rate:r})}</div>`}
   if(kind==='p')return `<label>${l}（可一次选多张，最多 ${MAXP} 张）</label><input type="file" accept="image/*" multiple onchange="pick(this)"><div id="pvs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px">${imgsHTML()}</div>`;
  }).join('');
  let lastBy='';try{lastBy=localStorage.getItem('by')||''}catch(e){}
@@ -337,6 +339,10 @@ function openForm(type,id,pos){
  $('#dlg').showModal();
  if(type==='photo'){cur.prov=d.prov||'';cur.time=d.time||'';cur.ad=d.ad||'';cur.dist=d.dist||'';cur.poi=d.poi||'';cur.fn=d.fn||'';const pe=document.querySelector('#dlg [data-k=place]');if(pe)pe.onchange=()=>geoPlace(pe.value)}
 }
+const rt=v=>v&&v.rate!=null&&v.rate!==''?Number(v.rate):(v&&v.star?v.star.length:0);
+const rtTxt=v=>{const r=rt(v);return r?(Math.round(r*10)/10).toFixed(1):''};
+function stars(v){const r=rt(v);if(!r)return '';return `<span class="stars" style="--p:${Math.min(100,r/5*100)}%">★★★★★</span> <span style="color:var(--acc);font-size:.9em">${rtTxt(v)}</span>`}
+function rateSync(v,num){let r=parseFloat(v);if(isNaN(r))r=0;r=Math.min(5,Math.max(0,Math.round(r*10)/10));const n=$('#rtn'),sl=document.querySelector('#dlg input[type=range]');if(!num&&n)n.value=r||'';if(num&&sl)sl.value=r;const pv=$('#rtp');if(pv)pv.innerHTML=stars({rate:r})}
 const MAXP=9,pcnt=v=>v&&v.more&&v.more.length?`<span class="pcnt">📷 ${1+v.more.length}</span>`:'';
 function imgsHTML(){return (cur.imgs||[]).map((u,i)=>`<div style="position:relative"><img src="${u}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;display:block" alt=""><button type="button" class="btn o" style="position:absolute;top:2px;right:2px;padding:0 6px;font-size:12px" onclick="rmImg(${i})">✕</button>${i?`<button type="button" class="btn o" style="position:absolute;left:2px;bottom:2px;padding:0 5px;font-size:11px" onclick="coverImg(${i})">设为封面</button>`:'<span class="tag" style="position:absolute;left:2px;bottom:2px;font-size:11px">封面</span>'}</div>`).join('')}
 function redrawImgs(){const e=$('#pvs');if(e)e.innerHTML=imgsHTML()}
@@ -360,7 +366,8 @@ function submit(){
  document.querySelectorAll('#dlg [data-k]').forEach(e=>{const k=e.dataset.k;o[k]=e.type==='checkbox'?e.checked:e.dataset.s?(k==='score'||k==='star'?Number(e.value):t.f.find(x=>x[0]===k)[3][e.value]):e.value});
  if(cur.type==='star')return;
  if(cur.type==='photo'||cur.type==='food'){o.img=cur.imgs[0]||'';if(cur.imgs.length>1)o.more=cur.imgs.slice(1);else delete o.more}
- if(cur.type==='place'||cur.type==='food')o.star=['★','★★','★★★','★★★★','★★★★★'][o.star];
+ if(cur.type==='place')o.star=['★','★★','★★★','★★★★','★★★★★'][o.star];
+ if(cur.type==='food'){const r=parseFloat(o.rate);o.rate=isNaN(r)?null:Math.min(5,Math.max(0,Math.round(r*10)/10));o.star=o.rate?'★'.repeat(Math.round(o.rate)):''}
  if(cur.type==='food'&&cur.x!=null){o.x=cur.x;o.y=cur.y}
  if((cur.type==='food'||cur.type==='photo')&&cur.lng!=null){o.lng=cur.lng;o.lat=cur.lat}
  if(cur.type==='letter'&&!o.date)o.date=(items[cur.id]||{}).date||td();
@@ -374,13 +381,13 @@ function submit(){
 function rm(){if(confirm('确定删除这条记录吗？')){$('#dlg').close();del(cur.id)}}
 function foodViewOld(){
  const all=rec('food'),a=dsort(all.filter(v=>ff==='全部'||v.kind===ff));
- const eaten=all.filter(v=>v.kind==='吃过'),rated=eaten.filter(v=>v.star);
- const avg=rated.length?(rated.reduce((s,v)=>s+v.star.length,0)/rated.length).toFixed(1):'-';
- const top=[...rated].sort((x,y)=>y.star.length-x.star.length).slice(0,3);
+ const eaten=all.filter(v=>v.kind==='吃过'),rated=eaten.filter(v=>rt(v)>0);
+ const avg=rated.length?(rated.reduce((s,v)=>s+rt(v),0)/rated.length).toFixed(1):'-';
+ const top=[...rated].sort((x,y)=>rt(y)-rt(x)).slice(0,3);
  const bg=items.mapbg&&items.mapbg.img;
- const pins=a.filter(v=>v.x!=null).map(v=>`<div class="pin ${v.kind==='吃过'?'eat':'want'} ${sel===v.id?'sel':''}" style="left:${v.x}%;top:${v.y}%" onclick="event.stopPropagation();selPin('${v.id}')">${v.kind==='吃过'?(v.star?v.star.length:'✓'):'想'}</div>`).join('');
+ const pins=a.filter(v=>v.x!=null).map(v=>`<div class="pin ${v.kind==='吃过'?'eat':'want'} ${sel===v.id?'sel':''}" style="left:${v.x}%;top:${v.y}%" onclick="event.stopPropagation();selPin('${v.id}')">${v.kind==='吃过'?(rt(v)?rtTxt(v):'✓'):'想'}</div>`).join('');
  const s=sel&&items[sel];
- return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★${top.length?`<div class="mut">🏆 ${top.map(v=>esc(v.name)+' '+v.star).join(' ｜ ')}</div>`:''}</div>
+ return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★${top.length?`<div class="mut">🏆 ${top.map(v=>esc(v.name)+' '+rtTxt(v)+'★').join(' ｜ ')}</div>`:''}</div>
  <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}<button class="btn o" onclick="placing='new';render()">📍 点地图添加</button><button class="btn o" onclick="mapBg()">🖼️ 地图底图</button></div>
  ${placing?`<p style="color:var(--acc)">👆 在地图上点一下选择位置 <a href="#" onclick="placing=null;render();return false">取消</a></p>`:''}
  <div class="map" style="${bg?`background-image:url(${bg});`:''}${placing?'cursor:crosshair;outline:3px dashed var(--acc)':''}" onclick="mapTap(event)">${pins}${!bg&&!all.length?'<div class="mut" style="padding:16px">先点“地图底图”上传一张城市地图截图，再点“点地图添加”放置店铺</div>':''}</div>
@@ -417,14 +424,14 @@ function mountMap(){mountF();if(foodFull)return;const e=$('#mapslot');if(e&&mEl)
 let cluster=null,tips=[],tmr=null;
 function pin(v,n,ids){
  const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
- const lab=one?(eat?'★'+(v.star?v.star.length:''):'想吃'):n;
+ const lab=one?(eat?'★'+(rt(v)?rtTxt(v):''):'想吃'):n;
  const im=v.img?`<img src="${v.img}" style="width:100%;height:100%;object-fit:cover;display:block">`:`<div style="font-size:26px;line-height:48px;text-align:center;background:#efe4cf;height:100%">${eat?'😋':'🤤'}</div>`;
  return `<div data-ids="${ids||''}" style="pointer-events:none;position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid ${col}${sel===v.id&&one?';outline:3px solid #e8b923':''}"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div><div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 ${one?12:16}px sans-serif;text-shadow:0 1px 3px #000">${lab}</div><div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div>${one?`<div style="position:absolute;top:68px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(0,0,0,.65);color:#fff;padding:0 6px;border-radius:8px;font:11px sans-serif">${esc(v.name)}</div>`:''}</div>`;
 }
 function drawMarkers(){
  if(!amap||!plugReady)return;
  const pts=rec('food').filter(v=>v.lng!=null&&(ff==='全部'||v.kind===ff)).map(v=>({lnglat:[v.lng,v.lat],id:v.id,v}));
- const sg=JSON.stringify([sel,ff,pts.map(p=>[p.id,p.lnglat,p.v.kind,p.v.star,(p.v.img||'').length,p.v.name])]);
+ const sg=JSON.stringify([sel,ff,pts.map(p=>[p.id,p.lnglat,p.v.kind,p.v.star,p.v.rate,(p.v.img||'').length,p.v.name])]);
  if(mlayer&&sg===mSig)return;mSig=sg;
  if(!mlayer)mlayer=mkLayer(amap,pin);
  mlayer.set(pts);
@@ -475,7 +482,7 @@ function foodMatches(q){
 function foodRes(){
  const L=foodMatches(fq);if(!fq.trim())return '';
  if(!L.length)return '<div class="mut" style="padding:8px 4px">没有找到已标记的美食</div>';
- return L.map(v=>`<div onclick="pickFood('${v.id}')" style="padding:8px 4px;border-bottom:1px dashed var(--line);cursor:pointer"><b>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</b> <span style="color:var(--acc)">${esc(v.star||'')}</span>${v.kind==='吃过'?` <span class="tag">吃过 ${eatN(v)} 次</span>`:''}<div class="mut">${esc(v.cuisine||'')} ${(v.lng!=null||v.x!=null)?'📍':'· 未定位'} ${esc(shortAddr(v.addr))}</div></div>`).join('');
+ return L.map(v=>`<div onclick="pickFood('${v.id}')" style="padding:8px 4px;border-bottom:1px dashed var(--line);cursor:pointer"><b>${v.kind==='吃过'?'😋':'🤤'} ${esc(v.name)}</b> ${stars(v)}${v.kind==='吃过'?` <span class="tag">吃过 ${eatN(v)} 次</span>`:''}<div class="mut">${esc(v.cuisine||'')} ${(v.lng!=null||v.x!=null)?'📍':'· 未定位'} ${esc(shortAddr(v.addr))}</div></div>`).join('');
 }
 function foodSearch(v){fq=v;const e=$('#fsr');if(e)e.innerHTML=foodRes()}
 function ffSearch(v){fq=v;const e=$('#ffr');if(e){e.innerHTML=foodRes();e.style.display=v.trim()?'block':'none'}}
@@ -500,14 +507,14 @@ function closeFoodFull(){
 function fdClose(){sel=null;const e=$('#fdet');if(e){e.style.display='none';e.innerHTML=''}if(foodFull){mSig='';drawMarkers()}}
 function showFD(id){
  const v=items[id],e=$('#fdet');if(!v||!e)return;const eat=v.kind==='吃过';e.style.display='block';
- e.innerHTML=`<div class="row" style="align-items:center"><h3 style="margin:0">${eat?'😋':'🤤'} ${esc(v.name)} <span style="color:var(--acc)">${esc(v.star||'')}</span></h3><button class="btn o" onclick="fdClose()">✕</button></div><div class="mut">${esc(v.addr||'')}</div>${eatBar(v)}${navLinks(v)}<p style="margin:8px 0 0"><a href="#" onclick="fdMore=!fdMore;showFD('${id}');return false" style="color:var(--acc)">${fdMore?'▼ 收起详情':'▲ 展开详情'}</a></p>${fdMore?`${v.img?`<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px">${[v.img,...(v.more||[])].map(u=>`<img src="${u}" alt="" style="height:160px;flex:none;border-radius:4px;filter:sepia(.25)">`).join('')}</div>`:''}<div style="margin-top:6px"><span class="tag">${esc(v.kind||'')}</span>${v.cuisine?`<span class="tag">${esc(v.cuisine)}</span>`:''}${v.price?`<span class="tag">人均 ${esc(v.price)}</span>`:''}${v.date?`<span class="tag">${esc(v.date)}</span>`:''}${v.by?`<span class="tag">${esc(v.by)}</span>`:''}</div>${v.note?`<div style="white-space:pre-wrap;margin-top:6px">${esc(v.note)}</div>`:''}<p style="text-align:right"><button class="btn o" onclick="openForm('food','${id}')">✏️ 编辑</button></p>`:''}`;
+ e.innerHTML=`<div class="row" style="align-items:center"><h3 style="margin:0">${eat?'😋':'🤤'} ${esc(v.name)} ${stars(v)}</h3><button class="btn o" onclick="fdClose()">✕</button></div><div class="mut">${esc(v.addr||'')}</div>${eatBar(v)}${navLinks(v)}<p style="margin:8px 0 0"><a href="#" onclick="fdMore=!fdMore;showFD('${id}');return false" style="color:var(--acc)">${fdMore?'▼ 收起详情':'▲ 展开详情'}</a></p>${fdMore?`${v.img?`<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px">${[v.img,...(v.more||[])].map(u=>`<img src="${u}" alt="" style="height:160px;flex:none;border-radius:4px;filter:sepia(.25)">`).join('')}</div>`:''}<div style="margin-top:6px"><span class="tag">${esc(v.kind||'')}</span>${v.cuisine?`<span class="tag">${esc(v.cuisine)}</span>`:''}${v.price?`<span class="tag">人均 ${esc(v.price)}</span>`:''}${v.date?`<span class="tag">${esc(v.date)}</span>`:''}${v.by?`<span class="tag">${esc(v.by)}</span>`:''}</div>${v.note?`<div style="white-space:pre-wrap;margin-top:6px">${esc(v.note)}</div>`:''}<p style="text-align:right"><button class="btn o" onclick="openForm('food','${id}')">✏️ 编辑</button></p>`:''}`;
 }
 function foodView(){
  if(!(AMAP.key&&AMAP.sec))return foodViewOld();
  loadAMap();
  const all=rec('food'),a=dsort(all.filter(v=>ff==='全部'||v.kind===ff));
- const eaten=all.filter(v=>v.kind==='吃过'),rated=eaten.filter(v=>v.star);
- const avg=rated.length?(rated.reduce((t,v)=>t+v.star.length,0)/rated.length).toFixed(1):'-';
+ const eaten=all.filter(v=>v.kind==='吃过'),rated=eaten.filter(v=>rt(v)>0);
+ const avg=rated.length?(rated.reduce((t,v)=>t+rt(v),0)/rated.length).toFixed(1):'-';
  const s=sel&&items[sel];
  const res=sres.map((p,i)=>`<div class="card" onclick="pickPoi(${i})"><b>${esc(p.name)}</b><div class="mut">${esc((p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''))}</div></div>`).join('');
  return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
@@ -1135,7 +1142,7 @@ function yearView(){
  if(dn>0)fr('🎞️',dn,'天 · 一起走过','截至 '+end);
  if(di.length){const L=[...di].sort((a,b)=>(b.text||'').length-(a.text||'').length)[0];fr('📖',di.length,'篇日记','最长的一篇：'+esc(title(L)))}
  if(ph.length){const ad=ph.filter(v=>v.ad);fr('📷',ph.length,'张照片足迹',`点亮 ${new Set(ad.map(v=>v.ad.slice(0,2))).size} 个省 · ${new Set(ad.map(v=>v.ad.slice(0,4))).size} 个市`)}
- if(fo.length){const t=[...fo].sort((a,b)=>(b.star||'').length-(a.star||'').length)[0];fr('😋',fo.length,'家一起吃过的店',t&&t.star?'最爱：'+esc(t.name)+' '+esc(t.star):'')}
+ if(fo.length){const t=[...fo].sort((a,b)=>rt(b)-rt(a))[0];fr('😋',fo.length,'家一起吃过的店',t&&rt(t)?'最爱：'+esc(t.name)+' '+rtTxt(t)+'★':'')}
  if(le.length||ev.length||pl.length)fr('💌',le.length,'封情话','还有 '+ev.length+' 件大事记、'+pl.length+' 个完成的约会/心愿');
  if(mo.length)fr('🌤️',mo.filter(v=>v.score>=4).length,'个好心情的日子',who().map(n=>{const p=mo.filter(v=>v.by===n);return p.length?esc(n)+' 平均 '+MO[Math.round(p.reduce((t,v)=>t+v.score,0)/p.length)]:''}).filter(Boolean).join('　'));
  if(fi.length)fr('🩹',fi.length,'次吵架复盘','吵架不可怕，复盘就是成长');
