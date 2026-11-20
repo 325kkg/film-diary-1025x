@@ -992,7 +992,7 @@ function fightView(){
 const EXP=[['三餐','🍚'],['零食','🍿'],['衣服','👕'],['交通','🚌'],['旅行','🏝️'],['学习','🎓'],['医疗','💊'],['送礼','🎁'],['日用品','🛒'],['住房','🏠'],['美妆','💄'],['话费网费','📱'],['娱乐','🎮'],['宠物','🐾'],['水电煤','💡'],['汽车','🚗'],['数码','📷'],['运动','🏃'],['红包','🧧'],['其它','📦']];
 const INC=[['工资','💰'],['红包','🧧'],['理财','📈'],['退款','🔄'],['其它','✨']];
 const ACC=['微信','支付宝','Apple Pay','银行卡','现金'],COL=['#b5482f','#e0a65a','#3f7d8c','#7d8f4e','#8a5a7d','#c9a227','#6b6b6b'];
-let bd={},bScope='all',bTab='list',bMonth='',bRange='m',bAnchor='',bQ='',bCF='',QN=[],recBusy=false,cdAll=false,yrSel='';
+let bd={},bSel=null,bScope='all',bTab='list',bMonth='',bRange='m',bAnchor='',bQ='',bCF='',QN=[],recBusy=false,cdAll=false,yrSel='';
 const iso=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const icon=(c,k)=>((k==='收入'?INC:EXP).find(x=>x[0]===c)||['','📦'])[1];
 const wk=d=>'周'+'日一二三四五六'[new Date(d+'T00:00').getDay()];
@@ -1065,11 +1065,12 @@ async function saveBill(again){
  render();
 }
 async function delBill(){if(!confirm('确定删除这笔吗？'))return;try{await rest('bills?id=eq.'+bd.id,{method:'DELETE'})}catch(e){toast('删除失败');return}$('#dlg').close();bSig='';await loadBills();render()}
-const setScope=k=>{bScope=k;render()},setBTab=k=>{bTab=k;render()},setRange=k=>{bRange=k;render()};
+const setScope=k=>{bScope=k;render()},setBTab=k=>{bTab=k;render()},setRange=k=>{bRange=k;bSel=null;render()};
 function setQ(v){bQ=v;const e=$('#blist');if(e)e.innerHTML=listHTML();markNew()}
 function setCF(v){bCF=v;const e=$('#blist');if(e)e.innerHTML=listHTML();markNew()}
+function selBar(k){bSel=bSel===k?null:k;const y=window.scrollY;render();window.scrollTo(0,y)}
 function shiftBM(n){bMonth=mAdd(bMonth,n);render()}
-function shiftA(n){const d=new Date(bAnchor+'T00:00');if(bRange==='d')d.setDate(d.getDate()+n);else if(bRange==='w')d.setDate(d.getDate()+7*n);else if(bRange==='y')d.setFullYear(d.getFullYear()+n,0,1);else d.setMonth(d.getMonth()+n,1);bAnchor=iso(d);render()}
+function shiftA(n){const d=new Date(bAnchor+'T00:00');if(bRange==='d')d.setDate(d.getDate()+n);else if(bRange==='w')d.setDate(d.getDate()+7*n);else if(bRange==='y')d.setFullYear(d.getFullYear()+n,0,1);else d.setMonth(d.getMonth()+n,1);bAnchor=iso(d);bSel=null;render()}
 function rangeOf(r,a){const d=new Date(a+'T00:00');if(r==='d')return [a,a];
  if(r==='y')return [a.slice(0,4)+'-01-01',a.slice(0,4)+'-12-31'];
  if(r==='w'){const s=new Date(d);s.setDate(d.getDate()-(d.getDay()+6)%7);const e=new Date(s);e.setDate(s.getDate()+6);return [iso(s),iso(e)]}
@@ -1137,11 +1138,13 @@ function billView(){
   return head+`<div style="display:flex;gap:6px;margin-bottom:10px"><input id="bq" placeholder="🔍 搜备注/分类/账户" value="${esc(bQ)}" oninput="setQ(this.value)"><select style="width:auto" onchange="setCF(this.value)"><option value="">全部分类</option>${cats.map(c=>`<option ${bCF===c?'selected':''}>${c}</option>`).join('')}</select></div><div id="blist">${listHTML()}</div><p style="text-align:center"><button class="btn o" onclick="openRecur()">🔁 固定账单</button> <button class="btn o" onclick="exportCsv()">⬇︎ 导出CSV</button></p><p class="mut" style="text-align:center">“我的/TA的”指个人账单，“共同”指我们一起花的；两个人都能看、能改、能删。</p>`;
  }
  const [s,e]=rangeOf(bRange,bAnchor),sl=ok.filter(b=>b.dt>=s&&b.dt<=e),ex=sl.filter(b=>b.kind==='支出'),te=sum(sl,'支出'),ti=sum(sl,'收入');
- let lab=[],per=[],n;
- if(bRange==='y'){const Y=s.slice(0,4);for(let k=1;k<=12;k++){const m=Y+'-'+String(k).padStart(2,'0');lab.push(k);per.push(sum(ex.filter(b=>b.dt.startsWith(m)),'支出'))}n=Y===td().slice(0,4)?+td().slice(5,7):12}
- else{for(let d=new Date(s+'T00:00');iso(d)<=e;d.setDate(d.getDate()+1)){const x=iso(d);lab.push(x.slice(8));per.push(sum(ex.filter(b=>b.dt===x),'支出'))}n=lab.length}
+ let lab=[],per=[],keys=[],n;
+ if(bRange==='y'){const Y=s.slice(0,4);for(let k=1;k<=12;k++){const m=Y+'-'+String(k).padStart(2,'0');lab.push(k);keys.push(m);per.push(sum(ex.filter(b=>b.dt.startsWith(m)),'支出'))}n=Y===td().slice(0,4)?+td().slice(5,7):12}
+ else{for(let d=new Date(s+'T00:00');iso(d)<=e;d.setDate(d.getDate()+1)){const x=iso(d);lab.push(x.slice(8));keys.push(x);per.push(sum(ex.filter(b=>b.dt===x),'支出'))}n=lab.length}
  const mx=Math.max(1,...per);
- const bars=lab.length>1?`<svg viewBox="0 0 300 110" width="100%">${per.map((v,k)=>{const w=300/lab.length,h=v/mx*80;return `<rect x="${k*w+w*.15}" y="${90-h}" width="${w*.7}" height="${Math.max(h,v?2:0)}" rx="2" fill="var(--acc)"/>`+((lab.length<=12||k%5===0)?`<text x="${k*w+w/2}" y="104" text-anchor="middle" font-size="8" style="fill:var(--mut)">${lab[k]}</text>`:'')}).join('')}</svg>`:'';
+ const bars=lab.length>1?`<svg viewBox="0 0 300 110" width="100%" style="-webkit-user-select:none">${per.map((v,k)=>{const w=300/lab.length,h=v/mx*80,on=bSel===keys[k],dim=bSel&&!on;return `<g onclick="selBar('${keys[k]}')" style="cursor:pointer"><rect x="${k*w}" y="0" width="${w}" height="110" fill="transparent"/>${on?`<rect x="${k*w}" y="0" width="${w}" height="94" rx="3" fill="var(--acc)" opacity=".12"/><text x="${Math.min(Math.max(k*w+w/2,22),278)}" y="${Math.max(10,88-h)}" text-anchor="middle" font-size="9" font-weight="700" style="fill:var(--acc)">${v.toFixed(0)}</text>`:''}<rect x="${k*w+w*.15}" y="${90-h}" width="${w*.7}" height="${Math.max(h,v?2:0)}" rx="2" fill="var(--acc)" opacity="${dim?.4:1}"/>`+((lab.length<=12||k%5===0||on)?`<text x="${k*w+w/2}" y="104" text-anchor="middle" font-size="8" style="fill:${on?'var(--acc)':'var(--mut)'}" font-weight="${on?700:400}">${lab[k]}</text>`:'')+'</g>'}).join('')}</svg><div class="mut" style="text-align:center;font-size:12px">点柱子查看${bRange==='y'?'当月':'当天'}的明细</div>`:'';
+ const sk=bRange==='d'?s:bSel,dl=sk?sl.filter(b=>b.dt.startsWith(sk)):[];
+ const dpan=sk?`<div class="card static"><div class="row"><b>${sk.length===7?(+sk.slice(5))+'月':sk.slice(5)+' '+wk(sk)}</b><span class="mut">支出 ${sum(dl,'支出').toFixed(2)}${sum(dl,'收入')?' · 收入 '+sum(dl,'收入').toFixed(2):''}</span></div>${dl.length?dl.map(billRow).join(''):'<p class="mut" style="text-align:center;margin:10px 0 4px">这一段没有记录</p>'}</div>`:'';
  const cat={};ex.forEach(b=>cat[b.cat||'其它']=(cat[b.cat||'其它']||0)+Number(b.amt));
  let parts=Object.entries(cat).sort((a,b)=>b[1]-a[1]).map(([n,v])=>({n,v}));
  if(parts.length>6){const o=parts.slice(6).reduce((t,p)=>t+p.v,0);parts=parts.slice(0,6).concat([{n:'其它',v:o}])}
@@ -1149,7 +1152,7 @@ function billView(){
  const lbl=bRange==='d'?s:bRange==='w'?s.slice(5)+' ~ '+e.slice(5):bRange==='y'?s.slice(0,4)+'年':s.slice(0,7);
  return head+`<div class="card static"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">${seg(bRange,[['d','日'],['w','周'],['m','月'],['y','年']],'setRange')}<span><button class="btn o" onclick="shiftA(-1)">‹</button> <b>${lbl}</b> <button class="btn o" onclick="shiftA(1)">›</button></span></div>
  <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${te.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${ti.toFixed(2)}</b></div><div class="mut">${bRange==='y'?'月':'日'}均支出<br><b style="font-size:18px">${(te/n).toFixed(2)}</b></div></div>${bars}</div>
- ${parts.length?`<div class="card static"><h3>支出构成</h3><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${donut(parts)}<div style="flex:1;min-width:140px">${parts.map(p=>`<div class="row" style="margin:3px 0"><span><span style="color:${p.c}">●</span> ${icon(p.n,'支出')} ${esc(p.n)}</span><span>${p.v.toFixed(2)} <span class="mut">${(p.v/te*100).toFixed(0)}%</span></span></div>`).join('')}</div></div></div>`:'<p class="mut" style="text-align:center;padding:30px 0">这段时间没有支出记录</p>'}`;
+ ${dpan}${parts.length?`<div class="card static"><h3>支出构成</h3><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${donut(parts)}<div style="flex:1;min-width:140px">${parts.map(p=>`<div class="row" style="margin:3px 0"><span><span style="color:${p.c}">●</span> ${icon(p.n,'支出')} ${esc(p.n)}</span><span>${p.v.toFixed(2)} <span class="mut">${(p.v/te*100).toFixed(0)}%</span></span></div>`).join('')}</div></div></div>`:'<p class="mut" style="text-align:center;padding:30px 0">这段时间没有支出记录</p>'}`;
 }
 function exportCsv(){
  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',rows=[['日期','类型','分类','金额','备注','账户','性质','记录/付款人']].concat(bills.slice().sort((a,b)=>a.dt<b.dt?-1:1).map(b=>[b.dt,b.kind,b.cat,b.amt,b.note,b.acct,b.shared?'共同':'个人',bn(b.owner)]));
