@@ -137,6 +137,20 @@ let bills=[],bSig='',ME=null,MEM=[],memLoaded=false,loginMode='pw',lastEmail='';
 let touching=false,pend=false,touchTm=null,touchEndT=0;
 const T0=performance.now(),tm={};let RASTER=true;try{RASTER=localStorage.getItem('raster')==='1'}catch(e){}
 const RTILE='https://webrd0{1,2,3,4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=[x]&y=[y]&z=[z]';
+const MSTYLES=[['auto','跟随主题'],['normal','标准'],['light','月光银'],['whitesmoke','远山黛'],['fresh','草色青'],['dark','幻影黑'],['sat','卫星']];
+let mstyle='auto';try{mstyle=localStorage.getItem('mstyle')||'auto'}catch(e){}
+const isDarkUI=()=>{const t=document.documentElement.getAttribute('data-theme');return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)};
+const styleKey=()=>mstyle==='auto'?(isDarkUI()?'dark':'normal'):mstyle;
+const mapStyleName=()=>(MSTYLES.find(x=>x[0]===mstyle)||MSTYLES[0])[1];
+function applyMapStyle(){
+ const k=styleKey();
+ [amap,fmap].forEach(m=>{if(!m||m._sty===k)return;m._sty=k;
+  try{m.setMapStyle('amap://styles/'+(k==='sat'?'normal':k))}catch(e){}
+  try{if(k==='sat'){if(!m._sat)m._sat=[new AMap.TileLayer.Satellite({zIndex:5}),new AMap.TileLayer.RoadNet({zIndex:6})];m.add(m._sat)}else if(m._sat)m.remove(m._sat)}catch(e){}
+ });
+}
+function cycleMapStyle(){const i=MSTYLES.findIndex(x=>x[0]===mstyle);mstyle=MSTYLES[(i+1)%MSTYLES.length][0];try{localStorage.setItem('mstyle',mstyle)}catch(e){}toast('地图样式：'+mapStyleName());applyMapStyle();render()}
+try{new MutationObserver(()=>applyMapStyle()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>applyMapStyle())}catch(e){}
 function mapOpts(o){const r={...o,resizeEnable:true};if(RASTER)r.layers=[new AMap.TileLayer({getTileUrl:RTILE,zIndex:2})];return r}
 function tmText(){return '加载耗时（秒）：'+[['data','数据'],['engine','地图引擎'],['tiles','地图画面'],['plug','标记组件']].map(([k,n])=>n+(tm[k]?(tm[k]/1000).toFixed(1):'…')).join(' · ')+(RASTER?' · 极速底图':' · 矢量底图')}
 function tmShow(){const e=document.getElementById('tmline');if(e)e.textContent=tmText()}
@@ -361,7 +375,7 @@ function render(){
  $('#sub').textContent=warn||(meta?'SINCE '+meta.start:'LOVE FILM JOURNAL');
  $('#fab').style.display=meta&&tab!=='home'&&tab!=='year'?'':'none';
  $('#app').innerHTML=pwBanner()+view();mountMap();if(foodFull){if(sel&&items[sel])showFD(sel);else fdClose()}
-markNew();
+applyMapStyle();markNew();
 }
 function go(k){tab=k;render();scrollTo(0,0)}
 $('#fab').onclick=()=>{if(tab==='bill'){openBill();return}if(tab==='plan'&&pTab==='goal'){goalForm();return}if(tab==='food'&&AMAP.key){const q=$('#sq');if(q){q.scrollIntoView({block:'center'});q.focus();return}}openForm(tab==='tl'?'event':tab)};
@@ -584,7 +598,7 @@ function foodView(){
  const res=sres.map((p,i)=>`<div class="card" onclick="pickPoi(${i})"><b>${esc(p.name)}</b><div class="mut">${esc((p.cityname||'')+(p.adname||'')+(typeof p.address==='string'?p.address:''))}</div></div>`).join('');
  return `<div class="card static" style="text-align:center">🤤 想吃 <b>${all.length-eaten.length}</b> · 😋 吃过 <b>${eaten.length}</b> · 平均 <b>${avg}</b> ★</div>
  <div style="display:flex;gap:6px;margin-bottom:8px">${['全部','想吃','吃过'].map(k=>`<button class="btn ${ff===k?'':'o'}" onclick="ff='${k}';render()">${k}</button>`).join('')}</div>
- ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<input id="fsq" placeholder="🔍 搜已标记的美食（店名/菜系/地址）" value="${esc(fq)}" oninput="foodSearch(this.value)"><div id="fsr" style="margin-bottom:6px">${foodRes()}</div><div style="text-align:right;margin-bottom:6px"><button class="btn o" onclick="openEatStats()">📊 吃过统计</button> <button class="btn o" onclick="openFoodFull()">⛶ 全屏地图</button></div><div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
+ ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<input id="fsq" placeholder="🔍 搜已标记的美食（店名/菜系/地址）" value="${esc(fq)}" oninput="foodSearch(this.value)"><div id="fsr" style="margin-bottom:6px">${foodRes()}</div><div style="text-align:right;margin-bottom:6px"><button class="btn o" onclick="cycleMapStyle()">🗺 ${mapStyleName()}</button> <button class="btn o" onclick="openEatStats()">📊 吃过统计</button> <button class="btn o" onclick="openFoodFull()">⛶ 全屏地图</button></div><div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
  <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p><p class="mut" id="tmline" style="font-size:11px;margin-top:-6px">${tmText()}</p>
  ${s?card({...s,id:sel}):''}
  ${a.length?a.map(card).join(''):empty()}`;
@@ -939,7 +953,7 @@ function photoView(){
   const sx=SL[bi][0],sy=SL[bi][1];fSlot[v.id]=[sx+80,sy+95];
   return `<div class="ft" style="left:${sx/10}%;top:${sy/11}%;transform:rotate(${(n%5-2)*1.2}deg)" onclick="openForm('photo','${v.id}')">${pcnt(v)}${v.img?`<img src="${v.img}" alt="">`:''}<div>${esc((v.poi||v.dist||v.place||v.prov||'').slice(0,7))}</div></div>`}).join('');
  const wall=ph.length?`<div class="grid" style="margin-top:14px">${ph.map((v,i)=>`<div class="pol" style="--r:${(i%5-2)*1.2}deg" onclick="openForm('photo','${v.id}')">${pcnt(v)}${v.img?`<img src="${v.img}" alt="" loading="lazy" decoding="async">`:''}<p>${esc(v.place||'')}<br><span class="mut">${esc(v.date||'')}${v.time?' '+esc(v.time.slice(11,16)):''}</span><br><a href="#" class="mut" onclick="event.stopPropagation();openPhotos('${v.id}');return false">📲 在相册中找</a></p></div>`).join('')}</div>`:empty();
- return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片</div>
+ return `<div class="card static" style="text-align:center">已点亮 <b>${vp.size}</b> 个省级地区 · <b>${vc.size}</b> 个市 · <b>${ph.length}</b> 张照片<div style="margin-top:6px"><button class="btn o" onclick="cycleMapStyle()">🗺 地图样式：${mapStyleName()}</button></div></div>
  <div id="fwrap" style="position:relative;width:100%;padding-top:110%;background:var(--card);border:1px solid var(--line);border-radius:4px"><div id="fslot" style="position:absolute;left:20%;top:22.7%;width:60%;height:54.5%"><div class="mapph" style="height:100%;aspect-ratio:auto">🗺️ 地图加载中…</div></div><button class="locb" style="top:8px;right:8px;z-index:6;width:auto;border-radius:18px;padding:0 14px;font-size:14px" onclick="openFull()">⛶ 全屏地图</button><svg id="flines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3"></svg>${tiles}</div>
  <p class="mut" style="text-align:center">点右上角“全屏地图”可以大图查看、放大到街道，照片会以缩略图标在地图上，靠得近的会合并成数字</p>${wall}`;
 }
