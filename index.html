@@ -587,7 +587,7 @@ function foodView(){
  ${amapState===3?'<p class="mut">地图加载失败，请检查网络或 Key 配置</p>':`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="sq" placeholder="输入店名，自动提示（可带城市/商圈）" value="${esc(lastQ)}" oninput="tipInput()" onkeydown="if(event.key===\'Enter\')searchShop()"><button class="btn" onclick="searchShop()" style="white-space:nowrap">搜索</button></div><div id="tips"></div><p class="mut" style="margin:0 0 6px"><a href="#" onclick="openForm('food');return false">找不到？手动添加</a></p>${res}<input id="fsq" placeholder="🔍 搜已标记的美食（店名/菜系/地址）" value="${esc(fq)}" oninput="foodSearch(this.value)"><div id="fsr" style="margin-bottom:6px">${foodRes()}</div><div style="text-align:right;margin-bottom:6px"><button class="btn o" onclick="openEatStats()">📊 吃过统计</button> <button class="btn o" onclick="openFoodFull()">⛶ 全屏地图</button></div><div id="mapslot">${mEl?'':'<div class="mapph">🗺️ 地图加载中…</div>'}</div>`}
  <p class="mut">照片标记：红框=吃过，蓝框=想吃；数字=该区域的店铺数，放大地图会分开显示。点标记查看详情和导航。</p><p class="mut" id="tmline" style="font-size:11px;margin-top:-6px">${tmText()}</p>
  ${s?card({...s,id:sel}):''}
- ${a.length?a.map(card).join(''):empty()}`;
+ ${a.length||s?a.filter(v=>!(s&&v.id===sel)).map(card).join(''):empty()}`;
 }
 let me=null,meMk=null,myCity='',locBtn=null,watchId=null;
 function dist(a,b){const r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[0]-a[0])*r,x=Math.sin(dl/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dn/2)**2;return 12742000*Math.asin(Math.sqrt(x))}
