@@ -8,78 +8,84 @@
 <link rel="preconnect" href="https://vdata.amap.com" crossorigin>
 <link rel="preconnect" href="https://webrd01.is.autonavi.com" crossorigin>
 <link rel="preconnect" href="https://webrd02.is.autonavi.com" crossorigin>
-<meta name="theme-color" content="#3b2f25">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)"><meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="胶片日记">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-:root{--bg:#efe4cf;--card:#f8f0df;--ink:#3b2f25;--mut:#8a7762;--acc:#b5482f;--line:#cdb99a;--pol:#fffaf0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1e1914;--card:#2a231c;--ink:#eadcc4;--mut:#a69580;--acc:#e0805f;--line:#4a3f33;--pol:#3a3128;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#1e1914;--card:#2a231c;--ink:#eadcc4;--mut:#a69580;--acc:#e0805f;--line:#4a3f33;--pol:#3a3128;color-scheme:dark}
+:root{--bg:#F2F2F7;--card:#fff;--ink:#000;--mut:#8A8A8E;--acc:#FF2D55;--line:rgba(60,60,67,.16);--pol:#fff;--fill:rgba(120,120,128,.12);--navbg:rgba(242,242,247,.8);--sh:0 1px 3px rgba(0,0,0,.06);--sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Helvetica,Arial,sans-serif;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--card:#1C1C1E;--ink:#fff;--mut:#98989F;--acc:#FF375F;--line:rgba(84,84,88,.6);--pol:#1C1C1E;--fill:rgba(120,120,128,.24);--navbg:rgba(0,0,0,.72);--sh:none;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#000;--card:#1C1C1E;--ink:#fff;--mut:#98989F;--acc:#FF375F;--line:rgba(84,84,88,.6);--pol:#1C1C1E;--fill:rgba(120,120,128,.24);--navbg:rgba(0,0,0,.72);--sh:none;color-scheme:dark}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Songti SC","Noto Serif CJK SC",Georgia,serif;background-image:radial-gradient(rgba(120,90,50,.07) 1px,transparent 1px);background-size:4px 4px;min-height:100vh}
-.strip{height:14px;background:repeating-linear-gradient(90deg,var(--ink) 0 14px,transparent 14px 26px);opacity:.85}
-header{text-align:center;padding:14px 12px 4px}
-h1{margin:0;font:700 22px "Courier New",monospace;letter-spacing:2px}
-.sub{color:var(--mut);font:12px "Courier New",monospace}
-nav{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px dashed var(--line)}
-nav button{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 11px;border-radius:3px;font:inherit;font-size:13px;cursor:pointer}
-nav button.on{background:var(--ink);color:var(--bg)}
-main{max-width:640px;margin:0 auto;padding:14px 14px 90px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:0 0 12px;box-shadow:2px 3px 0 rgba(60,40,20,.12);cursor:pointer}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sys);-webkit-font-smoothing:antialiased;min-height:100vh}
+.strip{display:none}
+header{text-align:left;padding:14px 20px 4px}
+h1{margin:0;font:700 32px/1.15 var(--sys);letter-spacing:.2px}
+.sub{color:var(--mut);font:13px var(--sys);margin-top:2px}
+nav{display:flex;gap:8px;overflow-x:auto;padding:10px 16px;position:sticky;top:0;background:var(--navbg);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);z-index:5;border-bottom:.5px solid var(--line);scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:none;border:0;background:var(--fill);color:var(--ink);padding:7px 14px;border-radius:999px;font:500 14px var(--sys);cursor:pointer;transition:background .2s,transform .15s}
+nav button.on{background:var(--acc);color:#fff}
+nav button:active{transform:scale(.95)}
+main{max-width:640px;margin:0 auto;padding:12px 16px 96px}
+.card{background:var(--card);border:0;border-radius:16px;padding:14px 16px;margin:0 0 12px;box-shadow:var(--sh);cursor:pointer;transition:transform .15s}
+.card:not(.static):active{transform:scale(.985)}
 .card.static{cursor:default}
-.hero{text-align:center;padding:22px 10px}
-.big{font:700 54px/1 "Courier New",monospace;color:var(--acc)}
+.hero{text-align:center;padding:24px 10px}
+.big{font:700 56px/1 var(--sys);font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--acc)}
 .mut{color:var(--mut);font-size:12px}
 .row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-h3{margin:0 0 6px;font:700 15px "Courier New","Songti SC",monospace;letter-spacing:1px}
+h3{margin:0 0 6px;font:600 17px var(--sys)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.stars{display:inline-block;background:linear-gradient(90deg,var(--acc) var(--p),rgba(128,128,128,.4) var(--p));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
-.newb{position:absolute;top:4px;left:4px;background:#d93025;color:#fff;font:700 11px/1 sans-serif;padding:3px 6px;border-radius:9px;z-index:3;pointer-events:none;box-shadow:0 0 0 2px var(--bg)}
-.pcnt{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;font:700 11px/1 sans-serif;padding:3px 6px;border-radius:9px;z-index:2}
-.pol{position:relative;background:var(--pol);padding:8px 8px 10px;box-shadow:2px 4px 8px rgba(0,0,0,.25);transform:rotate(var(--r,0deg));cursor:pointer}
-.pol img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:sepia(.35) contrast(1.05)}
-.pol p{margin:6px 0 0;font:12px "Courier New",monospace;text-align:center}
-.tl{border-left:2px solid var(--acc);margin-left:8px;padding-left:14px}
+.stars{display:inline-block;background:linear-gradient(90deg,#FF9F0A var(--p),rgba(120,120,128,.35) var(--p));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.newb{position:absolute;top:8px;left:8px;background:#FF3B30;color:#fff;font:700 11px/1 var(--sys);padding:3px 7px;border-radius:999px;z-index:3;pointer-events:none;box-shadow:0 0 0 2px var(--card)}
+.pcnt{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;font:600 11px/1 var(--sys);padding:4px 7px;border-radius:999px;z-index:2}
+.pol{position:relative;background:var(--card);padding:0 0 10px;border-radius:14px;overflow:hidden;box-shadow:var(--sh);transform:none!important;cursor:pointer;transition:transform .15s}
+.pol:active{transform:scale(.97)!important}
+.pol img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:none}
+.pol p{margin:8px 10px 0;font:12px var(--sys);text-align:left}
+.tl{border-left:2px solid var(--line);margin-left:8px;padding-left:14px}
 .tl .it{position:relative;margin-bottom:14px;cursor:pointer}
 .tl .it:before{content:"";position:absolute;left:-21px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--acc)}
-.stamp{display:inline-block;border:2px solid var(--acc);color:var(--acc);padding:0 6px;border-radius:3px;font:700 12px "Courier New",monospace;transform:rotate(-4deg)}
-.fab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:28px;box-shadow:0 3px 8px rgba(0,0,0,.35);cursor:pointer}
-.btn{border:1px solid var(--ink);background:var(--ink);color:var(--bg);padding:7px 14px;border-radius:3px;font:inherit;cursor:pointer}
-.btn.o{background:transparent;color:var(--ink)}
-dialog{border:2px solid var(--ink);background:var(--card);color:var(--ink);border-radius:4px;width:min(94vw,440px);max-height:88vh;overflow:auto}
-dialog::backdrop{background:rgba(0,0,0,.5)}
-label{display:block;margin:8px 0 2px;font-size:12px;color:var(--mut)}
-input,select,textarea{width:100%;padding:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:3px;font:inherit}
-input[type=checkbox]{width:auto}
+.stamp{display:inline-block;border:0;background:rgba(255,45,85,.12);color:var(--acc);padding:2px 10px;border-radius:999px;font:600 12px var(--sys);transform:none}
+.fab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;border:0;background:var(--acc);color:#fff;font:300 32px/1 var(--sys);box-shadow:0 6px 18px rgba(255,45,85,.35),0 2px 4px rgba(0,0,0,.15);cursor:pointer;transition:transform .15s}
+.fab:active{transform:scale(.92)}
+.btn{border:0;background:var(--acc);color:#fff;padding:8px 16px;border-radius:999px;font:600 14px var(--sys);cursor:pointer}
+.btn.o{background:var(--fill);color:var(--ink)}
+dialog{border:0;background:var(--card);color:var(--ink);border-radius:22px;width:min(94vw,440px);max-height:88vh;overflow:auto;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(0,0,0,.4);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+label{display:block;margin:12px 0 4px;font:500 12px var(--sys);color:var(--mut)}
+input,select,textarea{width:100%;padding:10px 12px;border:0;background:var(--fill);color:var(--ink);border-radius:10px;font:inherit}
+input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--acc)}
+input[type=range]{background:transparent;padding:0;accent-color:var(--acc)}
 textarea{min-height:80px}
-.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:13px;z-index:20}
-.tag{font-size:11px;border:1px solid var(--line);padding:0 5px;border-radius:2px;color:var(--mut);margin-right:4px}
-.map{position:relative;aspect-ratio:4/3;border:2px solid var(--ink);border-radius:4px;background-color:var(--card);background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px;overflow:hidden}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(44,44,46,.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;z-index:20}
+.tag{font-size:11px;border:0;background:var(--fill);padding:1px 8px;border-radius:999px;color:var(--mut);margin-right:4px}
+.map{position:relative;aspect-ratio:4/3;border:0;border-radius:16px;box-shadow:var(--sh);background-color:var(--card);background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px;overflow:hidden}
 .map[style*="url("]{background-size:cover;background-position:center}
-.pin{position:absolute;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:2px solid #fff;color:#fff;font:700 12px/24px "Courier New",monospace;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.4);cursor:pointer}
-.pin.eat{background:#b5482f}.pin.want{background:#3f7d8c}.pin.sel{outline:3px solid #e8b923}
-.tl2{position:relative;padding:4px 0}.tl2:before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:2px dashed var(--acc);opacity:.7}
-.tlh{text-align:center;margin:10px 0 14px;position:relative}.tlh .stamp{background:var(--bg);padding:2px 10px}
+.pin{position:absolute;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;border:2px solid #fff;color:#fff;font:700 12px/24px var(--sys);text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer}
+.pin.eat{background:#FF3B30}.pin.want{background:#007AFF}.pin.sel{outline:3px solid #FFCC00}
+.tl2{position:relative;padding:4px 0}.tl2:before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1.5px solid var(--line)}
+.tlh{text-align:center;margin:10px 0 14px;position:relative}.tlh .stamp{background:var(--card);padding:3px 12px;box-shadow:var(--sh)}
 .tli{position:relative;width:50%;padding:0 18px 16px;cursor:pointer}.tli.l{text-align:right}.tli.r{margin-left:50%}
-.tli .dot{position:absolute;top:16px;width:12px;height:12px;border-radius:50%;background:var(--acc);border:2px solid var(--bg)}.tli.l .dot{right:-7px}.tli.r .dot{left:-7px}
-.tlc{display:inline-block;max-width:100%;text-align:left;background:var(--pol);padding:7px 7px 9px;box-shadow:2px 3px 8px rgba(0,0,0,.25);transform:rotate(-1.5deg)}.tli.r .tlc{transform:rotate(1.5deg)}
-.tlc img{width:100%;aspect-ratio:1;object-fit:cover;display:block;margin-bottom:5px;filter:sepia(.3)}
-.tld{font:11px "Courier New",monospace;color:var(--mut)}.tlt{font-size:13px;word-break:break-all}
-.locb{position:absolute;top:10px;right:10px;z-index:30;width:40px;height:40px;border-radius:50%;border:0;background:#fff;color:#2f7df6;font-size:22px;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer}
-.mapph{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--card);border:2px solid var(--ink);border-radius:4px;color:var(--mut)}
-.zb{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}.zb button{width:36px;height:36px;border-radius:50%;border:0;background:#fff;color:#3b2f25;font-size:18px;box-shadow:0 2px 5px rgba(0,0,0,.35)}
-.ft{position:absolute;width:16%;box-sizing:border-box;background:var(--pol);padding:2.2%;box-shadow:1px 2px 5px rgba(0,0,0,.35);z-index:4;cursor:pointer}
-.ft img{width:100%;aspect-ratio:1;object-fit:cover;display:block;filter:sepia(.3)}
-.ft div{font:8px/1.3 "Courier New",monospace;text-align:center;white-space:nowrap;overflow:hidden;color:var(--ink);margin-top:2px}
+.tli .dot{position:absolute;top:16px;width:12px;height:12px;border-radius:50%;background:var(--acc);border:3px solid var(--bg)}.tli.l .dot{right:-7px}.tli.r .dot{left:-7px}
+.tlc{display:inline-block;max-width:100%;text-align:left;background:var(--card);padding:8px 8px 10px;border-radius:14px;box-shadow:var(--sh);transform:none}.tli.r .tlc{transform:none}
+.tlc img{width:100%;aspect-ratio:1;object-fit:cover;display:block;margin-bottom:6px;border-radius:10px;filter:none}
+.tld{font:11px var(--sys);color:var(--mut)}.tlt{font-size:13px;word-break:break-all}
+.locb{position:absolute;top:10px;right:10px;z-index:30;width:40px;height:40px;border-radius:50%;border:0;background:#fff;color:#007AFF;font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+.mapph{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:var(--card);border:0;border-radius:16px;color:var(--mut)}
+.zb{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}.zb button{width:36px;height:36px;border-radius:50%;border:0;background:#fff;color:#000;font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.ft{position:absolute;width:16%;box-sizing:border-box;background:var(--card);padding:2.2%;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:4;cursor:pointer}
+.ft img{width:100%;aspect-ratio:1;object-fit:cover;display:block;border-radius:3px;filter:none}
+.ft div{font:8px/1.3 var(--sys);text-align:center;white-space:nowrap;overflow:hidden;color:var(--ink);margin-top:2px}
 #fsfull{position:fixed;inset:0;z-index:150;background:var(--bg);display:none}#fsfull.on{display:block}
 #fsbar{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;gap:10px;align-items:center;z-index:5;pointer-events:none}#fsbar>*{pointer-events:auto}
-#fstt{background:rgba(0,0,0,.6);color:#fff;padding:5px 12px;border-radius:14px;font-size:13px}
+#fstt{background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;padding:6px 14px;border-radius:999px;font-size:13px}
 @keyframes unf{from{transform:scaleY(.15);opacity:0}to{transform:scaleY(1);opacity:1}}
 html,body{max-width:100%;overflow-x:hidden}.card,.mut,.pol p,.tlt,.tld{overflow-wrap:anywhere}
 .amap-marker,.amap-marker-content{pointer-events:none!important}
@@ -89,11 +95,16 @@ button,input,select,textarea,a,label,.card,summary{touch-action:manipulation;-we
 button,.btn{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .btn:active{opacity:.6}
 input,select,textarea{font-size:16px}
-.bdg{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#d93025;color:#fff;font:700 10px/16px sans-serif;text-align:center;box-shadow:0 0 0 2px var(--bg)}
+.bdg{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:#FF3B30;color:#fff;font:700 11px/17px var(--sys);text-align:center;box-shadow:0 0 0 2px var(--bg)}
 #ffull{position:fixed;inset:0;z-index:150;background:var(--bg);display:none}#ffull.on{display:block}
 #ffbar{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;gap:10px;align-items:center;z-index:5;pointer-events:none}#ffbar>*{pointer-events:auto}
-#fdet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:2px solid var(--ink);padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));max-height:55%;overflow:auto;display:none;box-shadow:0 -4px 12px rgba(0,0,0,.3)}
+#fdet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--card);border:0;border-radius:22px 22px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:55%;overflow:auto;display:none;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
 #ffslot,#ffslot *{touch-action:none}
+/* 统一覆盖：行内样式里残留的复古元素 */
+[style*="Courier"]{font-family:var(--sys)!important}
+[style*="border:1px solid var(--ink)"]{border:0!important;background:var(--fill)!important}
+[style*="solid var(--ink)"]{border:0!important}
+hr{border-top-style:solid!important}
 </style>
 </head>
 <body>
@@ -277,7 +288,7 @@ function home(){
 function moodChart(){
  const a=dsort(rec('mood')).reverse().slice(-14);
  if(a.length<2)return '';
- const cols=['#b5482f','#3f7d8c'],W=300,H=80;
+ const cols=['#FF3B30','#007AFF'],W=300,H=80;
  const ln=who().map((nm,j)=>{const p=a.filter(v=>v.by===nm);if(p.length<2)return '';const pts=p.map(v=>`${(a.indexOf(v)/(a.length-1))*W},${H-(v.score/4)*(H-10)-5}`).join(' ');return `<polyline points="${pts}" fill="none" stroke="${cols[j]}" stroke-width="2"/>`}).join('');
  return `<div class="card static"><h3>🌤️ 心情走势</h3><svg viewBox="0 0 ${W} ${H}" width="100%"><line x1="0" x2="${W}" y1="${H/2}" y2="${H/2}" stroke="var(--line)" stroke-dasharray="3"/>${ln}</svg><div class="mut"><span style="color:${cols[0]}">━ ${esc(who()[0])}</span>　<span style="color:${cols[1]}">━ ${esc(who()[1])}</span></div></div>`;
 }
@@ -469,10 +480,10 @@ function loadAMap(){
 function mountMap(){mountF();if(foodFull)return;const e=$('#mapslot');if(e&&mEl){e.style.position='relative';if(mEl.parentNode!==e){e.appendChild(mEl);if(!mMounted){mMounted=true;fRes()}}if(!locBtn){locBtn=document.createElement('button');locBtn.className='locb';locBtn.textContent='◎';locBtn.title='回到我的位置';locBtn.onclick=goMe}e.appendChild(locBtn);drawMarkers()}}
 let cluster=null,tips=[],tmr=null;
 function pin(v,n,ids){
- const eat=v.kind==='吃过',col=eat?'#b5482f':'#3f7d8c',one=!(n>1);
+ const eat=v.kind==='吃过',col=eat?'#FF3B30':'#007AFF',one=!(n>1);
  const lab=one?(eat?'★'+(rt(v)?rtTxt(v):''):'想吃'):n;
  const im=v.img?`<img src="${v.img}" style="width:100%;height:100%;object-fit:cover;display:block">`:`<div style="font-size:26px;line-height:48px;text-align:center;background:#efe4cf;height:100%">${eat?'😋':'🤤'}</div>`;
- return `<div data-ids="${ids||''}" style="pointer-events:none;position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid ${col}${sel===v.id&&one?';outline:3px solid #e8b923':''}"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div><div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 ${one?12:16}px sans-serif;text-shadow:0 1px 3px #000">${lab}</div><div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div>${one?`<div style="position:absolute;top:68px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(0,0,0,.65);color:#fff;padding:0 6px;border-radius:8px;font:11px sans-serif">${esc(v.name)}</div>`:''}</div>`;
+ return `<div data-ids="${ids||''}" style="pointer-events:none;position:relative;width:60px;height:60px;box-sizing:border-box;background:#fff;border-radius:13px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.45);border:2px solid ${col}${sel===v.id&&one?';outline:3px solid #FFCC00':''}"><div style="width:100%;height:100%;border-radius:9px;overflow:hidden">${im}</div><div style="position:absolute;left:6px;bottom:4px;color:#fff;font:700 ${one?12:16}px sans-serif;text-shadow:0 1px 3px #000">${lab}</div><div style="position:absolute;left:50%;bottom:-10px;margin-left:-8px;width:0;height:0;border:8px solid transparent;border-top:10px solid #fff;border-bottom:0"></div>${one?`<div style="position:absolute;top:68px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(0,0,0,.65);color:#fff;padding:0 6px;border-radius:8px;font:11px sans-serif">${esc(v.name)}</div>`:''}</div>`;
 }
 function drawMarkers(){
  if(!amap||!plugReady)return;
@@ -964,7 +975,7 @@ function shiftM(n){const [Y,M]=mm.split('-').map(Number),d=new Date(Y,M-1+n,1);r
 function moodView(){
  if(!mm)mm=td().slice(0,7);
  const [Y,M]=mm.split('-').map(Number),ms=rec('mood').filter(v=>(v.date||'').startsWith(mm)),dim=new Date(Y,M,0).getDate(),fw=(new Date(Y,M-1,1).getDay()+6)%7;
- const col=['#4a6fa5','#6b8fb8','#8a8a8a','#e0a65a','#c0392b'],by={};
+ const col=['#4a6fa5','#6b8fb8','#8a8a8a','#FF9F0A','#c0392b'],by={};
  ms.forEach(v=>{const d=+v.date.slice(8);(by[d]=by[d]||[]).push(v)});
  let cells='';for(let i=0;i<fw;i++)cells+='<div></div>';
  for(let d=1;d<=dim;d++){const l=by[d],a=l?Math.round(l.reduce((t,v)=>t+v.score,0)/l.length):null;
@@ -991,7 +1002,7 @@ function fightView(){
 }
 const EXP=[['三餐','🍚'],['零食','🍿'],['衣服','👕'],['交通','🚌'],['旅行','🏝️'],['学习','🎓'],['医疗','💊'],['送礼','🎁'],['日用品','🛒'],['住房','🏠'],['美妆','💄'],['话费网费','📱'],['娱乐','🎮'],['宠物','🐾'],['水电煤','💡'],['汽车','🚗'],['数码','📷'],['运动','🏃'],['红包','🧧'],['其它','📦']];
 const INC=[['工资','💰'],['红包','🧧'],['理财','📈'],['退款','🔄'],['其它','✨']];
-const ACC=['微信','支付宝','Apple Pay','银行卡','现金'],COL=['#b5482f','#e0a65a','#3f7d8c','#7d8f4e','#8a5a7d','#c9a227','#6b6b6b'];
+const ACC=['微信','支付宝','Apple Pay','银行卡','现金'],COL=['#FF3B30','#FF9F0A','#007AFF','#34C759','#AF52DE','#FFCC00','#8E8E93'];
 let bd={},bSel=null,bScope='all',bTab='list',bMonth='',bRange='m',bAnchor='',bQ='',bCF='',QN=[],recBusy=false,cdAll=false,yrSel='';
 const iso=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const icon=(c,k)=>((k==='收入'?INC:EXP).find(x=>x[0]===c)||['','📦'])[1];
@@ -1076,14 +1087,14 @@ function rangeOf(r,a){const d=new Date(a+'T00:00');if(r==='d')return [a,a];
  if(r==='w'){const s=new Date(d);s.setDate(d.getDate()-(d.getDay()+6)%7);const e=new Date(s);e.setDate(s.getDate()+6);return [iso(s),iso(e)]}
  return [a.slice(0,8)+'01',iso(new Date(d.getFullYear(),d.getMonth()+1,0))]}
 function billRow(b){
- return `<div class="card" onclick="openBill('${b.id}')" style="display:flex;gap:10px;align-items:center;padding:10px 12px;margin-bottom:8px"><span style="font-size:24px">${icon(b.cat,b.kind)}</span><div style="flex:1;min-width:0"><b>${esc(b.cat||'未分类')}</b> <span class="tag">${b.shared?'共同 · '+esc(bn(b.owner))+'付':esc(bn(b.owner))}</span><div class="mut">${esc(b.note||'')} ${esc(b.acct||'')}</div></div><b style="color:${b.kind==='收入'?'#3f7d8c':'var(--acc)'}">${b.kind==='收入'?'+':'-'}${Number(b.amt).toFixed(2)}</b></div>`;
+ return `<div class="card" onclick="openBill('${b.id}')" style="display:flex;gap:10px;align-items:center;padding:10px 12px;margin-bottom:8px"><span style="font-size:24px">${icon(b.cat,b.kind)}</span><div style="flex:1;min-width:0"><b>${esc(b.cat||'未分类')}</b> <span class="tag">${b.shared?'共同 · '+esc(bn(b.owner))+'付':esc(bn(b.owner))}</span><div class="mut">${esc(b.note||'')} ${esc(b.acct||'')}</div></div><b style="color:${b.kind==='收入'?'#007AFF':'var(--acc)'}">${b.kind==='收入'?'+':'-'}${Number(b.amt).toFixed(2)}</b></div>`;
 }
 function donut(parts){
  const T=parts.reduce((t,p)=>t+p.v,0);if(!T)return '';let a=-Math.PI/2,h='';
  parts.forEach(p=>{const f=p.v/T;if(f>.999){h+=`<circle cx="60" cy="60" r="50" fill="none" stroke="${p.c}" stroke-width="18"/>`;return}const b=a+f*2*Math.PI;h+=`<path d="M${60+50*Math.cos(a)},${60+50*Math.sin(a)}A50,50 0 ${f>.5?1:0} 1 ${60+50*Math.cos(b)},${60+50*Math.sin(b)}" fill="none" stroke="${p.c}" stroke-width="18"/>`;a=b});
  return `<svg viewBox="0 0 120 120" width="130">${h}<text x="60" y="65" text-anchor="middle" font-size="13" style="fill:var(--ink)">¥${T.toFixed(0)}</text></svg>`;
 }
-const pbar=(s,t)=>{const p=t>0?s/t*100:0,c=p>=100?'#b5482f':p>=80?'#e0a65a':'#7d8f4e';return `<div style="height:8px;border:1px solid var(--ink);border-radius:4px;overflow:hidden;margin:3px 0"><div style="height:100%;width:${Math.min(100,p)}%;background:${c}"></div></div>`};
+const pbar=(s,t)=>{const p=t>0?s/t*100:0,c=p>=100?'#FF3B30':p>=80?'#FF9F0A':'#34C759';return `<div style="height:8px;border:1px solid var(--ink);border-radius:4px;overflow:hidden;margin:3px 0"><div style="height:100%;width:${Math.min(100,p)}%;background:${c}"></div></div>`};
 const bgName=k=>k==='shared'?'共同':(ME&&k===ME.uid?'我的':'TA的');
 function bgGet(k){const B=items.budget||{},x=(B.b||{})[k];if(x)return x;if(k==='shared'&&!B.b&&(B.total>0||Object.keys(B.cats||{}).length))return {total:B.total,cats:B.cats||{}};return null}
 const bgSpend=k=>bills.filter(b=>b.kind==='支出'&&b.dt.startsWith(bMonth)&&(k==='shared'?b.shared:b.owner===k));
@@ -1097,7 +1108,7 @@ function budgetOne(k){
  if(!B||!(B.total>0||Object.keys(B.cats||{}).length))return `<p style="text-align:center;margin:6px 0"><button class="btn o" onclick="openBudget('${k}')">🎯 设置${nm}预算</button></p>`;
  const ex=bgSpend(k),tot=sum(ex,'支出');let h=`<div class="card static"><div class="row"><h3>🎯 ${nm}预算（本月）</h3><button class="btn o" onclick="openBudget('${k}')">修改</button></div>`;
  if(k!=='shared'){const ps=sum(ex.filter(b=>!b.shared),'支出'),sh=sum(ex.filter(b=>b.shared),'支出');h+=`<div class="mut" style="margin-bottom:4px">个人 ¥${ps.toFixed(0)} + 共同（${k===(ME&&ME.uid)?'我':'TA'}付的）¥${sh.toFixed(0)} = ¥${tot.toFixed(0)}</div>`}
- if(B.total>0)h+=`<div class="row"><span>总支出 ¥${tot.toFixed(0)} / ¥${B.total}</span><b style="color:${tot>B.total?'#b5482f':'var(--ink)'}">${tot>B.total?'超 ¥'+(tot-B.total).toFixed(0):'剩 ¥'+(B.total-tot).toFixed(0)}</b></div>${pbar(tot,B.total)}`;
+ if(B.total>0)h+=`<div class="row"><span>总支出 ¥${tot.toFixed(0)} / ¥${B.total}</span><b style="color:${tot>B.total?'#FF3B30':'var(--ink)'}">${tot>B.total?'超 ¥'+(tot-B.total).toFixed(0):'剩 ¥'+(B.total-tot).toFixed(0)}</b></div>${pbar(tot,B.total)}`;
  Object.entries(B.cats||{}).forEach(([c,v])=>{const s=sum(ex.filter(b=>b.cat===c),'支出');h+=`<div class="row mut" style="margin-top:4px"><span>${icon(c,'支出')} ${esc(c)} ¥${s.toFixed(0)} / ¥${v}</span><span>${s>v?'超 ¥'+(s-v).toFixed(0):'剩 ¥'+(v-s).toFixed(0)}</span></div>${pbar(s,v)}`});
  return h+'</div>';
 }
@@ -1123,7 +1134,7 @@ function listHTML(){
  const ml=sr?ok.filter(b=>(!bCF||b.cat===bCF)&&(!q||(b.note+b.cat+b.acct+bn(b.owner)).toLowerCase().includes(q))):ok.filter(b=>b.dt.startsWith(bMonth));
  const e=sum(ml,'支出'),i=sum(ml,'收入'),days={},[Y,M]=bMonth.split('-');
  ml.forEach(b=>(days[b.dt]=days[b.dt]||[]).push(b));
- const stat=`<div style="display:flex;justify-content:space-around;text-align:center;margin-top:8px"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${e.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${i.toFixed(2)}</b></div><div class="mut">结余<br><b style="font-size:18px">${(i-e).toFixed(2)}</b></div></div>`;
+ const stat=`<div style="display:flex;justify-content:space-around;text-align:center;margin-top:8px"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${e.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#007AFF;font-size:18px">${i.toFixed(2)}</b></div><div class="mut">结余<br><b style="font-size:18px">${(i-e).toFixed(2)}</b></div></div>`;
  return (sr?`<div class="card static"><b>🔍 搜索结果 ${ml.length} 笔</b>${stat}</div>`:`<div class="card static"><div class="row" style="align-items:center"><button class="btn o" onclick="shiftBM(-1)">‹</button><b>${Y}年${+M}月</b><button class="btn o" onclick="shiftBM(1)">›</button></div>${stat}</div>${budgetCard()}${settleCard()}`)
   +(ml.length?Object.keys(days).sort().reverse().map(d=>`<div class="row mut" style="margin:12px 0 6px"><span>${sr?d:d.slice(5)} ${wk(d)}</span><span>${sum(days[d],'支出')?'支出 '+sum(days[d],'支出').toFixed(2):''}${sum(days[d],'收入')?'　收入 '+sum(days[d],'收入').toFixed(2):''}</span></div>`+days[d].map(billRow).join('')).join(''):`<p class="mut" style="text-align:center;padding:30px 0">${sr?'没有找到':'这个月还没有记录，点右下角 + 记一笔'}</p>`);
 }
@@ -1151,7 +1162,7 @@ function billView(){
  parts.forEach((p,k)=>p.c=COL[k%COL.length]);
  const lbl=bRange==='d'?s:bRange==='w'?s.slice(5)+' ~ '+e.slice(5):bRange==='y'?s.slice(0,4)+'年':s.slice(0,7);
  return head+`<div class="card static"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">${seg(bRange,[['d','日'],['w','周'],['m','月'],['y','年']],'setRange')}<span><button class="btn o" onclick="shiftA(-1)">‹</button> <b>${lbl}</b> <button class="btn o" onclick="shiftA(1)">›</button></span></div>
- <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${te.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#3f7d8c;font-size:18px">${ti.toFixed(2)}</b></div><div class="mut">${bRange==='y'?'月':'日'}均支出<br><b style="font-size:18px">${(te/n).toFixed(2)}</b></div></div>${bars}</div>
+ <div style="display:flex;justify-content:space-around;text-align:center;margin:10px 0"><div class="mut">支出<br><b style="color:var(--acc);font-size:18px">${te.toFixed(2)}</b></div><div class="mut">收入<br><b style="color:#007AFF;font-size:18px">${ti.toFixed(2)}</b></div><div class="mut">${bRange==='y'?'月':'日'}均支出<br><b style="font-size:18px">${(te/n).toFixed(2)}</b></div></div>${bars}</div>
  ${dpan}${parts.length?`<div class="card static"><h3>支出构成</h3><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${donut(parts)}<div style="flex:1;min-width:140px">${parts.map(p=>`<div class="row" style="margin:3px 0"><span><span style="color:${p.c}">●</span> ${icon(p.n,'支出')} ${esc(p.n)}</span><span>${p.v.toFixed(2)} <span class="mut">${(p.v/te*100).toFixed(0)}%</span></span></div>`).join('')}</div></div></div>`:'<p class="mut" style="text-align:center;padding:30px 0">这段时间没有支出记录</p>'}`;
 }
 function exportCsv(){
@@ -1175,7 +1186,7 @@ const gsum=id=>rec('dep').filter(d=>d.goal===id).reduce((t,d)=>t+Number(d.amt),0
 function goalView(){
  const gs=rec('goal');
  if(!gs.length)return '<p class="mut" style="text-align:center;padding:40px 0">还没有存钱目标，点右下角 + 立一个，比如“旅行基金”</p>';
- return gs.map(g=>{const s=gsum(g.id),p=Math.max(0,Math.min(100,s/g.target*100));return `<div class="card" onclick="openGoal('${g.id}')"><div class="row"><h3>${esc(g.emoji||'🐷')} ${esc(g.name)}</h3><b style="color:var(--acc)">${p.toFixed(0)}%</b></div>${pbar(100-p,100).replace(/#b5482f|#e0a65a/g,'#7d8f4e').replace(/width:\d+(\.\d+)?%/,'width:'+p+'%')}<div class="row mut"><span>已存 ¥${s.toFixed(2)} / ¥${Number(g.target).toFixed(0)}</span><span>${s>=g.target?'🎉 已达成':g.due?'还有 '+Math.max(0,dd(g.due))+' 天':''}</span></div></div>`}).join('');
+ return gs.map(g=>{const s=gsum(g.id),p=Math.max(0,Math.min(100,s/g.target*100));return `<div class="card" onclick="openGoal('${g.id}')"><div class="row"><h3>${esc(g.emoji||'🐷')} ${esc(g.name)}</h3><b style="color:var(--acc)">${p.toFixed(0)}%</b></div>${pbar(100-p,100).replace(/#FF3B30|#FF9F0A/g,'#34C759').replace(/width:\d+(\.\d+)?%/,'width:'+p+'%')}<div class="row mut"><span>已存 ¥${s.toFixed(2)} / ¥${Number(g.target).toFixed(0)}</span><span>${s>=g.target?'🎉 已达成':g.due?'还有 '+Math.max(0,dd(g.due))+' 天':''}</span></div></div>`}).join('');
 }
 function goalForm(id){
  const g=id?items[id]:{};
@@ -1193,7 +1204,7 @@ function openGoal(id){
  let hint='';if(left<=0)hint='🎉 目标达成！';else if(g.due&&dd(g.due)>0){const mo=Math.max(1,dd(g.due)/30);hint=`还差 ¥${left.toFixed(0)}，到目标日约每月存 ¥${(left/mo).toFixed(0)}`}else hint=`还差 ¥${left.toFixed(0)}`;
  showDlg(`<h3>${esc(g.emoji||'🐷')} ${esc(g.name)}</h3><div class="row"><b style="color:var(--acc);font-size:22px">¥${s.toFixed(2)}</b><span class="mut">目标 ¥${Number(g.target).toFixed(0)}</span></div>${pbar(Math.max(0,s),g.target)}<div class="mut">${hint}</div><div class="mut">${Object.entries(by).map(([k,v])=>esc(k)+' 存了 ¥'+v.toFixed(0)).join(' · ')}</div>
  <label>金额（元）</label><input id="da" type="number" inputmode="decimal"><label>备注（可空）</label><input id="dn"><p><button class="btn" onclick="addDep('${id}',1)">存入</button> <button class="btn o" onclick="addDep('${id}',-1)">取出</button></p>
- ${ds.map(d=>`<div class="row mut" style="margin:4px 0"><span>${esc(d.dt)} ${esc(d.by||'')} ${esc(d.note||'')}</span><span><b style="color:${d.amt>=0?'#7d8f4e':'var(--acc)'}">${d.amt>=0?'+':''}${Number(d.amt).toFixed(2)}</b> <a href="#" onclick="delDep('${d.id}','${id}');return false" style="color:var(--mut)">删</a></span></div>`).join('')}
+ ${ds.map(d=>`<div class="row mut" style="margin:4px 0"><span>${esc(d.dt)} ${esc(d.by||'')} ${esc(d.note||'')}</span><span><b style="color:${d.amt>=0?'#34C759':'var(--acc)'}">${d.amt>=0?'+':''}${Number(d.amt).toFixed(2)}</b> <a href="#" onclick="delDep('${d.id}','${id}');return false" style="color:var(--mut)">删</a></span></div>`).join('')}
  <p style="display:flex;justify-content:space-between"><span><button class="btn o" onclick="goalForm('${id}')">编辑目标</button> <button class="btn o" onclick="delGoal('${id}')">删除目标</button></span><button class="btn o" onclick="$('#dlg').close()">关闭</button></p>`);
 }
 async function addDep(id,sg){const a=parseFloat($('#da').value);if(!(a>0)){toast('请输入金额');return}
