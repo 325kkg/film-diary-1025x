@@ -245,6 +245,8 @@ nav button.on::after{content:"";position:absolute;inset:-4px;border-radius:34px;
 .fab{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .toast{bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 main{padding-bottom:150px}
+html.rf-on .card{isolation:isolate;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:transparent!important}
+.lens{position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;background-repeat:no-repeat;box-shadow:inset 0 0 0 .6px var(--r0),inset 1.5px 1.5px 1px -.5px var(--r1),inset -1.5px -1.5px 1px -.5px var(--r2),inset 0 0 22px 3px var(--glow)}
 </style>
 <script>
 function setLook(k){if(k!=="film"&&k!=="glass")k="apple";var g=function(i){return document.getElementById(i)};g("st-film").media=k==="film"?"all":"not all";g("st-apple").media=k==="film"?"not all":"all";g("st-glass").media=k==="glass"?"all":"not all";document.documentElement.setAttribute("data-look",k);var m=document.querySelectorAll("meta[name=theme-color]");if(m.length>1){m[0].content=k==="film"?"#3b2f25":"#F2F2F7";m[1].content=k==="film"?"#3b2f25":"#000000"}try{window.glHook&&window.glHook(k)}catch(e){}try{localStorage.setItem("look",k)}catch(e){}}
@@ -1181,20 +1183,88 @@ const WPS={
 };
 const wpDark=()=>{const t=document.documentElement.getAttribute('data-theme');return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)};
 let wpKey='aurora',wpImg=null;try{wpKey=localStorage.getItem('wp')||'aurora';const im=localStorage.getItem('wpimg');if(wpKey==='custom'&&im){wpImg=new Image();wpImg.src=im}else if(wpKey==='custom')wpKey='aurora'}catch(e){}
-function wpCanvas(w,h){
- const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),m=Math.max(w,h);
- if(wpKey==='custom'&&wpImg&&wpImg.complete&&wpImg.naturalWidth){const iw=wpImg.naturalWidth,ih=wpImg.naturalHeight,s=Math.max(w/iw,h/ih);x.drawImage(wpImg,(w-iw*s)/2,(h-ih*s)/2,iw*s,ih*s);return c}
- const W=WPS[wpKey]||WPS.aurora,dk=wpDark();x.fillStyle=dk?W.D:W.L;x.fillRect(0,0,w,h);
- W.b.forEach(([bx,by,br,rgb,a])=>{const g=x.createRadialGradient(bx*w,by*h,0,bx*w,by*h,br*m);g.addColorStop(0,`rgba(${rgb},${dk?a*.85:a})`);g.addColorStop(1,`rgba(${rgb},0)`);x.fillStyle=g;x.fillRect(0,0,w,h)});
- return c;
+function wpCanvas(w,h,th){
+ th=th||h;const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),m=Math.max(w,th),W=WPS[wpKey]||WPS.aurora,dk=wpDark();
+ x.fillStyle=dk?W.D:W.L;x.fillRect(0,0,w,h);
+ for(let k=0,y0=0;y0<h;k++,y0+=th){
+  if(wpKey==='custom'&&wpImg&&wpImg.complete&&wpImg.naturalWidth){const iw=wpImg.naturalWidth,ih=wpImg.naturalHeight,s=Math.max(w/iw,th/ih);x.save();x.beginPath();x.rect(0,y0,w,th);x.clip();if(k%2){x.translate(0,y0*2+th);x.scale(1,-1)}x.drawImage(wpImg,(w-iw*s)/2,y0+(th-ih*s)/2,iw*s,ih*s);x.restore();continue}
+  W.b.forEach(([bx,by,br,rgb,a])=>{const cy=y0+(k%2?1-by:by)*th,g=x.createRadialGradient(bx*w,cy,0,bx*w,cy,br*m);g.addColorStop(0,'rgba('+rgb+','+(dk?a*.85:a)+')');g.addColorStop(1,'rgba('+rgb+',0)');x.fillStyle=g;x.fillRect(0,y0,w,th)});
+ }
+ return x.canvas;
 }
 function applyWp(){
  let d=document.getElementById('wpbg');
- if(document.documentElement.getAttribute('data-look')!=='glass'){if(d)d.style.display='none';return}
- if(!d){d=document.createElement('div');d.id='wpbg';d.style.cssText='position:fixed;inset:0;z-index:-1;pointer-events:none;background-size:cover;background-position:center';document.body.prepend(d)}
- const r=Math.min(2.4,Math.max(1.2,innerHeight/Math.max(1,innerWidth))),c=wpCanvas(420,Math.round(420*r));
- d.style.backgroundImage=`url(${c.toDataURL('image/jpeg',.86)})`;d.style.display='block';
+ if(document.documentElement.getAttribute('data-look')!=='glass'){if(d)d.style.display='none';try{rfDisable()}catch(e){}return}
+ if(!d){d=document.createElement('div');d.id='wpbg';d.style.cssText='position:absolute;left:0;top:0;width:100%;z-index:-1;pointer-events:none;background-repeat:no-repeat';document.body.prepend(d)}
+ d.style.display='block';
+ try{rfEnable()}catch(e){const r=Math.min(2.4,Math.max(1.2,innerHeight/Math.max(1,innerWidth))),c=wpCanvas(420,Math.round(420*r));d.style.position='fixed';d.style.inset='0';d.style.backgroundSize='cover';d.style.backgroundImage='url('+c.toDataURL('image/jpeg',.86)+')'}
 }
+/* ===== 玻璃折射：背景随页面滚动，卡片内放一份对准的背景副本，只扭曲这份副本 ===== */
+const RF={on:false,n:0,fl:{},t:0,img:null,sharp:null,D:0,W:0,gbk:-1,defs:null,p:{rf:22,bz:26,gb:22}};
+function rfParams(){const cs=getComputedStyle(document.documentElement);RF.p.gb=parseFloat(cs.getPropertyValue('--gb'))||0;try{let v=parseFloat(localStorage.getItem('gl_rf'));RF.p.rf=isNaN(v)?22:v;v=parseFloat(localStorage.getItem('gl_bz'));RF.p.bz=isNaN(v)?26:v}catch(e){}}
+function rfMap(w,h,r,bz){
+ const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),im=x.createImageData(w,h),d=im.data,hw=w/2,hh=h/2,ix=hw-r,iy=hh-r;
+ for(let j=0;j<h;j++)for(let i=0;i<w;i++){
+  const px=i+.5-hw,py=j+.5-hh,qx=Math.abs(px)-ix,qy=Math.abs(py)-iy,ox=Math.max(qx,0),oy=Math.max(qy,0),dist=Math.hypot(ox,oy)+Math.min(Math.max(qx,qy),0)-r;
+  let R=128,G=128;
+  if(dist<0){const t=Math.min(1,-dist/bz),pr=Math.pow(1-t,2.4);
+   if(pr>.002){let nx,ny;if(ox>0||oy>0){const l=Math.hypot(ox,oy)||1;nx=Math.sign(px)*ox/l;ny=Math.sign(py)*oy/l}else if(qx>qy){nx=Math.sign(px);ny=0}else{nx=0;ny=Math.sign(py)}
+    R=128-127*nx*pr;G=128-127*ny*pr}}
+  const k=(j*w+i)*4;d[k]=R;d[k+1]=G;d[k+2]=128;d[k+3]=255;
+ }
+ x.putImageData(im,0,0);return c.toDataURL('image/png');
+}
+function rfFilter(w,h,r){
+ const k=w+'x'+h+'x'+r+'x'+RF.p.bz;if(RF.fl[k])return RF.fl[k];
+ if(Object.keys(RF.fl).length>80){RF.defs.innerHTML='';RF.fl={}}
+ const id='rf'+(++RF.n),s=Math.max(1,Math.ceil(Math.sqrt(w*h/300000))),url=rfMap(Math.max(2,Math.round(w/s)),Math.max(2,Math.round(h/s)),r/s,RF.p.bz/s);
+ const f=document.createElementNS('http://www.w3.org/2000/svg','filter');
+ f.setAttribute('id',id);f.setAttribute('filterUnits','userSpaceOnUse');f.setAttribute('x','0');f.setAttribute('y','0');f.setAttribute('width',w);f.setAttribute('height',h);f.setAttribute('color-interpolation-filters','sRGB');
+ f.innerHTML='<feImage href="'+url+'" xlink:href="'+url+'" x="0" y="0" width="'+w+'" height="'+h+'" preserveAspectRatio="none" result="m"/><feDisplacementMap in="SourceGraphic" in2="m" scale="'+(RF.p.rf*2)+'" xChannelSelector="R" yChannelSelector="G"/>';
+ RF.defs.appendChild(f);RF.fl[k]=id;return id;
+}
+function rfImages(W,D){
+ const sc=.5,w=Math.max(2,Math.round(W*sc)),h=Math.max(2,Math.round(D*sc)),th=Math.max(2,Math.round(w*innerHeight/Math.max(1,innerWidth)));
+ const c=wpCanvas(w,h,th);RF.sharp=c.toDataURL('image/jpeg',.82);
+ const f=Math.max(1,Math.round(1+RF.p.gb*.5)),sm=document.createElement('canvas');sm.width=Math.max(2,Math.round(w/f));sm.height=Math.max(2,Math.round(h/f));sm.getContext('2d').drawImage(c,0,0,sm.width,sm.height);
+ RF.img=sm.toDataURL('image/jpeg',.82);RF.D=D;RF.W=W;RF.gbk=RF.p.gb;
+ const bg=document.getElementById('wpbg');if(bg){bg.style.height=D+'px';bg.style.backgroundImage='url("'+RF.sharp+'")';bg.style.backgroundSize=W+'px '+D+'px'}
+}
+function rfSync(){
+ RF.t=0;if(!RF.on)return;
+ const W=document.documentElement.clientWidth,D=Math.max(document.documentElement.scrollHeight,innerHeight);
+ if(!RF.img||Math.abs(RF.D-D)>40||RF.W!==W||RF.gbk!==RF.p.gb)rfImages(W,D);
+ const sx=scrollX,sy=scrollY;
+ document.querySelectorAll('.card').forEach(el=>{
+  if(el.closest('dialog')||el.closest('#ffull')||el.closest('#fsfull'))return;
+  const w=Math.round(el.offsetWidth),h=Math.round(el.offsetHeight);let ln=el._lens;
+  if(w<24||h<24){if(ln)ln.style.display='none';return}
+  if(!ln||!ln.isConnected){ln=document.createElement('div');ln.className='lens';el.prepend(ln);el._lens=ln}
+  ln.style.display='';
+  const r=Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius)||16,w/2,h/2),id=rfFilter(w,h,r),b=el.getBoundingClientRect();
+  ln.style.filter='url(#'+id+')';
+  ln.style.backgroundImage='linear-gradient(135deg,rgba(255,255,255,.26),rgba(255,255,255,.02) 42%,rgba(255,255,255,.1)),linear-gradient(var(--glass),var(--glass)),url("'+RF.img+'")';
+  ln.style.backgroundSize='100% 100%,100% 100%,'+W+'px '+RF.D+'px';
+  ln.style.backgroundPosition='0 0,0 0,'+(-(b.left+sx))+'px '+(-(b.top+sy))+'px';
+ });
+}
+function rfSched(ms){clearTimeout(RF.t);RF.t=setTimeout(rfSync,ms||80)}
+function rfEnable(){
+ if(!RF.defs){const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');sv.setAttribute('width','0');sv.setAttribute('height','0');sv.style.cssText='position:absolute;width:0;height:0;pointer-events:none';sv.innerHTML='<defs id="rfdefs"></defs>';document.body.appendChild(sv);RF.defs=sv.firstChild;
+  new MutationObserver(ms=>{if(RF.on&&ms.some(m=>[].some.call(m.addedNodes,n=>!(n.classList&&n.classList.contains('lens')))||m.removedNodes.length))rfSched(60)}).observe(document.getElementById('app'),{childList:true,subtree:true});
+  try{new ResizeObserver(()=>rfSched(120)).observe(document.body)}catch(e){}
+  addEventListener('resize',()=>rfSched(220));addEventListener('load',()=>rfSched(200));
+ }
+ RF.on=true;rfParams();document.documentElement.classList.add('rf-on');RF.img=null;rfSched(10);
+}
+function rfDisable(){
+ RF.on=false;document.documentElement.classList.remove('rf-on');
+ document.querySelectorAll('.lens').forEach(e=>e.remove());if(RF.defs){RF.defs.innerHTML='';RF.fl={}}RF.img=null;
+}
+function setGl(k,v){try{localStorage.setItem('gl_'+k,v)}catch(e){}rfParams();
+ if(k==='rf'){document.querySelectorAll('#rfdefs feDisplacementMap').forEach(e=>e.setAttribute('scale',RF.p.rf*2))}
+ else{if(RF.defs){RF.defs.innerHTML='';RF.fl={}}rfSched(160)}}
+
 function glHook(){try{applyWp()}catch(e){}}
 window.glHook=glHook;
 try{new MutationObserver(()=>glHook()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});matchMedia('(prefers-color-scheme:dark)').addEventListener('change',glHook)}catch(e){}
@@ -1220,9 +1290,9 @@ try{glHook()}catch(e){}
 })();
 
 const LOOKS=[['apple','苹果标准','清爽的 iOS 风格：圆角卡片、系统字体、系统配色、开关样式'],['glass','苹果·玻璃','液态玻璃：半透明磨砂、底部悬浮导航、高光边缘、渐变背景'],['film','胶片复古','原来的米色胶片风：打字机字体、拍立得、虚线、齿孔']];
-function setGlass(k,v){document.documentElement.style.setProperty('--'+k,v);try{localStorage.setItem('gl_'+k,v)}catch(e){}}
-function resetGlass(){['ga','gb'].forEach(k=>{document.documentElement.style.removeProperty('--'+k);try{localStorage.removeItem('gl_'+k)}catch(e){}});openLook()}
-function openLook(){const cur=document.documentElement.getAttribute('data-look');showDlg(`<h3>🎨 外观</h3>${LOOKS.map(([k,n,d])=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;${cur===k?'outline:2px solid var(--acc)':''}" onclick="setLook('${k}');openLook()"><div><b>${n}</b><div class="mut">${d}</div></div><b style="color:var(--acc)">${cur===k?'✓':''}</b></div>`).join('')}${cur==='glass'?`<div class="card static"><b>玻璃调节</b><label>透明度（往左越透明，0 为完全透明）</label><input type="range" min="0" max="40" step="1" value="${Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ga'))*100)}" oninput="setGlass('ga',this.value/100)"><label>磨砂程度（往左越清晰）</label><input type="range" min="0" max="44" step="1" value="${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gb'))}" oninput="setGlass('gb',this.value+'px')"><label>背景</label><div style="display:flex;gap:6px;flex-wrap:wrap">${Object.entries(WPS).map(([k,w])=>`<button class="btn ${wpKey===k?'':'o'}" style="padding:5px 12px;font-size:13px" onclick="setWp('${k}')">${w.n}</button>`).join('')}<button class="btn ${wpKey==='custom'?'':'o'}" style="padding:5px 12px;font-size:13px" onclick="this.nextElementSibling.click()">📷 相册</button><input type="file" accept="image/*" style="display:none" onchange="wpPick(this)"></div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn o" onclick="setGlass('ga',0.01);setGlass('gb','28px');openLook()">极致透明</button><button class="btn o" onclick="resetGlass()">恢复默认</button></p></div>`:''}<p class="mut">外观只保存在这台手机上，两个人可以各选各的。</p><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button></p>`)}
+function setGlass(k,v){document.documentElement.style.setProperty('--'+k,v);try{localStorage.setItem('gl_'+k,v)}catch(e){}if(k==='gb'){rfParams();rfSched(180)}}
+function resetGlass(){['ga','gb','rf','bz'].forEach(k=>{document.documentElement.style.removeProperty('--'+k);try{localStorage.removeItem('gl_'+k)}catch(e){}});rfParams();if(RF.defs){RF.defs.innerHTML='';RF.fl={}}rfSched(60);openLook()}
+function openLook(){const cur=document.documentElement.getAttribute('data-look');showDlg(`<h3>🎨 外观</h3>${LOOKS.map(([k,n,d])=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;${cur===k?'outline:2px solid var(--acc)':''}" onclick="setLook('${k}');openLook()"><div><b>${n}</b><div class="mut">${d}</div></div><b style="color:var(--acc)">${cur===k?'✓':''}</b></div>`).join('')}${cur==='glass'?`<div class="card static"><b>玻璃调节</b><label>透明度（往左越透明，0 为完全透明）</label><input type="range" min="0" max="40" step="1" value="${Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ga'))*100)}" oninput="setGlass('ga',this.value/100)"><label>磨砂程度（往左越清晰）</label><input type="range" min="0" max="44" step="1" value="${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gb'))}" oninput="setGlass('gb',this.value+'px')"><label>折射强度（边缘扭曲程度，0 为无）</label><input type="range" min="0" max="60" step="1" value="${RF.p.rf}" oninput="setGl('rf',this.value)"><label>边缘宽度（扭曲区域有多宽）</label><input type="range" min="8" max="50" step="1" value="${RF.p.bz}" oninput="setGl('bz',this.value)"><label>背景</label><div style="display:flex;gap:6px;flex-wrap:wrap">${Object.entries(WPS).map(([k,w])=>`<button class="btn ${wpKey===k?'':'o'}" style="padding:5px 12px;font-size:13px" onclick="setWp('${k}')">${w.n}</button>`).join('')}<button class="btn ${wpKey==='custom'?'':'o'}" style="padding:5px 12px;font-size:13px" onclick="this.nextElementSibling.click()">📷 相册</button><input type="file" accept="image/*" style="display:none" onchange="wpPick(this)"></div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn o" onclick="setGlass('ga',0.01);setGlass('gb','28px');openLook()">极致透明</button><button class="btn o" onclick="resetGlass()">恢复默认</button></p></div>`:''}<p class="mut">外观只保存在这台手机上，两个人可以各选各的。</p><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button></p>`)}
 const showDlg=h=>{$('#dlg').innerHTML=h;if(!$('#dlg').open)$('#dlg').showModal()};
 async function loadBills(){
  try{const r=(await rest('bills?select=*&order=dt.desc,created_at.desc&limit=5000'))||[],sg=JSON.stringify(r.map(b=>[b.id,b.kind,b.owner,b.amt,b.cat,b.dt,b.note,b.acct,b.shared]));
