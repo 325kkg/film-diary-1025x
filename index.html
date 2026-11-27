@@ -18,6 +18,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style id="st-base">
 header{position:relative;padding-right:64px}
+.ni{font-style:normal}
 #lookbtn{position:absolute;right:16px;top:16px;width:38px;height:38px;border-radius:50%;border:0;font-size:18px;line-height:1;cursor:pointer;background:rgba(120,120,128,.18);color:inherit;padding:0}
 </style>
 <style id="st-film" media="not all">
@@ -211,12 +212,7 @@ body{background:repeating-linear-gradient(115deg,rgba(255,255,255,.07) 0 2px,tra
 #fdet{background-color:var(--glassR)}
 .card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.3px;background:linear-gradient(135deg,rgba(255,255,255,1),rgba(255,255,255,0) 30%,rgba(255,255,255,0) 62%,rgba(160,210,255,.85));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);pointer-events:none}
 .pol,.tlc,.ft{background:var(--glass2);box-shadow:var(--gbox);text-shadow:var(--ts)}
-nav{position:fixed;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));left:12px;right:12px;border-radius:40px;padding:8px;background:radial-gradient(120% 140% at 0% 0%,rgba(255,255,255,.42),rgba(255,255,255,0) 55%),radial-gradient(100% 120% at 100% 100%,rgba(255,255,255,.16),rgba(255,255,255,0) 55%),var(--glass);-webkit-backdrop-filter:blur(calc(var(--gb) * 1.2)) saturate(280%) brightness(1.12) contrast(.96);backdrop-filter:blur(calc(var(--gb) * 1.2)) saturate(280%) brightness(1.12) contrast(.96);border:0;box-shadow:var(--gbox),0 14px 40px rgba(0,0,0,.18);z-index:20;text-shadow:var(--ts)}
-nav button{background:transparent;padding:9px 14px}
-nav button.on{background:radial-gradient(120% 120% at 0% 0%,rgba(255,255,255,.5),rgba(255,255,255,.1) 60%),var(--gsel);color:var(--acc);box-shadow:inset 0 0 0 .6px var(--r0),inset 1.5px 1.5px 1px -.5px var(--r1),0 3px 10px rgba(0,0,0,.1)}
 main{padding-bottom:150px}
-.fab{bottom:calc(88px + env(safe-area-inset-bottom,0px));background:radial-gradient(120% 100% at 20% 0%,rgba(255,255,255,.55),rgba(255,255,255,0) 55%),rgba(255,45,85,.74);-webkit-backdrop-filter:blur(12px) saturate(220%);backdrop-filter:blur(12px) saturate(220%);box-shadow:inset 0 0 0 .6px rgba(255,255,255,.6),inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.95),inset -1.5px -1.5px 1px -.5px rgba(255,170,190,.7),0 14px 30px -8px rgba(255,45,85,.5)}
-.toast{bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 .btn{background:radial-gradient(120% 140% at 20% 0%,rgba(255,255,255,.5),rgba(255,255,255,0) 58%),rgba(255,45,85,.72);-webkit-backdrop-filter:blur(12px) saturate(220%);backdrop-filter:blur(12px) saturate(220%);box-shadow:inset 0 0 0 .6px rgba(255,255,255,.55),inset 1.5px 1.5px 1px -.5px rgba(255,255,255,.9),0 8px 18px -6px rgba(255,45,85,.45)}
 .btn.o{background:radial-gradient(120% 140% at 20% 0%,rgba(255,255,255,.34),rgba(255,255,255,0) 60%),var(--glass2);color:var(--ink);-webkit-backdrop-filter:blur(14px) saturate(230%);backdrop-filter:blur(14px) saturate(230%);box-shadow:inset 0 0 0 .6px var(--r0),inset 1.5px 1.5px 1px -.5px var(--r1),inset -1.5px -1.5px 1px -.5px var(--r2)}
 dialog{background:radial-gradient(130% 90% at 0% 0%,rgba(255,255,255,.4),rgba(255,255,255,0) 52%),linear-gradient(160deg,rgba(255,255,255,.13),rgba(255,255,255,0) 40%),var(--glassR);-webkit-backdrop-filter:blur(calc(var(--gb) * 1.5)) saturate(260%) brightness(1.1);backdrop-filter:blur(calc(var(--gb) * 1.5)) saturate(260%) brightness(1.1);border:0;box-shadow:var(--gbox),0 30px 80px rgba(0,0,0,.4);text-shadow:var(--ts)}
@@ -226,10 +222,21 @@ input,select,textarea{background:rgba(255,255,255,.2);box-shadow:inset 0 0 0 .6p
 .tlh .stamp{background:var(--glassR)}
 .newb,.bdg{box-shadow:0 0 0 2px rgba(255,255,255,.8)}
 @supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){:root{--ga:.6}}
-html.gl-on body{background:transparent!important}
-html.gl-on nav{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:inset 0 0 0 .6px var(--r0),0 14px 40px rgba(0,0,0,.2)!important}
-html.gl-cards .card{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:0 18px 40px -14px var(--cs),0 6px 16px -6px rgba(0,0,0,.16)!important}
-html.gl-cards .card::before{display:none}
+
+nav{position:fixed;top:auto;left:12px;right:12px;bottom:calc(-2px + env(safe-area-inset-bottom,0px));height:98px;padding:14px 10px;display:flex;align-items:center;gap:2px;overflow-x:auto;overflow-y:hidden;background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border:0;border-radius:0;box-shadow:none;z-index:20;scroll-snap-type:x proximity}
+nav::before{content:"";position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));height:70px;border-radius:40px;z-index:-1;background:radial-gradient(120% 140% at 0% 0%,rgba(255,255,255,.34),rgba(255,255,255,0) 55%),radial-gradient(100% 120% at 100% 100%,rgba(255,255,255,.12),rgba(255,255,255,0) 55%),rgba(255,255,255,max(var(--ga),.16));-webkit-backdrop-filter:blur(calc(var(--gb) * 1.1)) saturate(250%) brightness(1.08);backdrop-filter:blur(calc(var(--gb) * 1.1)) saturate(250%) brightness(1.08);box-shadow:var(--gbox),0 14px 40px rgba(0,0,0,.22);pointer-events:none}
+nav button{position:relative;isolation:isolate;flex:none;min-width:66px;height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0 6px;background:transparent;border-radius:0;scroll-snap-align:center;text-shadow:var(--ts)}
+nav button .ni{font-size:23px;line-height:1;transition:transform .3s cubic-bezier(.2,.9,.3,1.3)}
+nav button .nl{font-size:11px;font-weight:500;white-space:nowrap;opacity:.85}
+nav button.on{background:transparent;color:var(--acc);box-shadow:none}
+nav button.on .ni{transform:scale(1.3) translateY(-1px)}
+nav button.on .nl{font-weight:700;opacity:1}
+nav button.on::before{content:"";position:absolute;inset:-16px -6px;border-radius:42px;z-index:-1;background:radial-gradient(120% 90% at 28% 12%,rgba(255,255,255,.34),rgba(255,255,255,.04) 62%),rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28),inset 3px 3px 5px -2px rgba(255,255,255,.8),inset -3px -3px 6px -2px rgba(120,200,255,.6),inset 0 0 22px rgba(255,255,255,.14),0 10px 26px rgba(0,0,0,.3);animation:lens .38s cubic-bezier(.2,.9,.3,1.25)}
+nav button.on::after{content:"";position:absolute;inset:-16px -6px;border-radius:42px;z-index:-1;padding:1.6px;background:conic-gradient(from 215deg,rgba(255,90,130,.95),rgba(255,210,120,.85),rgba(140,255,170,.75),rgba(120,200,255,.95),rgba(190,140,255,.85),rgba(255,90,130,.95));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:.8;pointer-events:none}
+@keyframes lens{from{transform:scale(.55);opacity:0}to{transform:scale(1);opacity:1}}
+.fab{bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+.toast{bottom:calc(122px + env(safe-area-inset-bottom,0px))}
+main{padding-bottom:160px}
 </style>
 <script>
 function setLook(k){if(k!=="film"&&k!=="glass")k="apple";var g=function(i){return document.getElementById(i)};g("st-film").media=k==="film"?"all":"not all";g("st-apple").media=k==="film"?"not all":"all";g("st-glass").media=k==="glass"?"all":"not all";document.documentElement.setAttribute("data-look",k);var m=document.querySelectorAll("meta[name=theme-color]");if(m.length>1){m[0].content=k==="film"?"#3b2f25":"#F2F2F7";m[1].content=k==="film"?"#3b2f25":"#000000"}try{window.glHook&&window.glHook(k)}catch(e){}try{localStorage.setItem("look",k)}catch(e){}}
@@ -496,8 +503,9 @@ function render(){
  if(!unlockedNow()){$('#nav').innerHTML='';$('#fab').style.display='none';$('#sub').textContent=warn||'LOCKED';$('#ttl').textContent='我们的胶片日记';$('#app').innerHTML=loginView();return}
  if(prevTab!==tab){if(prevTab)delete newSince[prevTab];prevTab=tab;if(BTABS.includes(tab))newSince[tab]=seen[tab]||seen._b||new Date().toISOString()}
  if(meta&&BTABS.includes(tab))markSeen(tab);
- const BG=badges();
- $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${i} ${n}${BG[k]?`<span class="bdg">${BG[k]>99?'99+':BG[k]}</span>`:''}</button>`).join('');
+ const BG=badges();const _nv=$('#nav'),_sl=_nv?_nv.scrollLeft:0,_nt=window._navTab;
+ $('#nav').innerHTML=NAV.map(([k,i,n])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')"><i class="ni">${i}</i> <span class="nl">${n}</span>${BG[k]?`<span class="bdg">${BG[k]>99?'99+':BG[k]}</span>`:''}</button>`).join('');
+ const _n2=$('#nav');if(_n2){_n2.scrollLeft=_sl;if(_nt!==tab){window._navTab=tab;const on=_n2.querySelector('.on');if(on)_n2.scrollLeft=Math.max(0,on.offsetLeft-(_n2.clientWidth-on.offsetWidth)/2)}}
  $('#ttl').textContent=meta?`${meta.a} & ${meta.b}`:'我们的胶片日记';
  $('#sub').textContent=warn||(meta?'SINCE '+meta.start:'LOVE FILM JOURNAL');
  $('#fab').style.display=meta&&tab!=='home'&&tab!=='year'?'':'none';
@@ -1142,7 +1150,7 @@ const inScope=b=>bScope==='all'||(bScope==='shared'?!!b.shared:(!b.shared&&(bSco
 const sum=(l,k)=>l.filter(b=>b.kind===k).reduce((t,b)=>t+Number(b.amt),0);
 const mAdd=(m,n)=>{const [y,k]=m.split('-').map(Number),d=new Date(y,k-1+n,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
 function uid5(s){let a=[2166136261,2654435761,1597334677,3812015801];for(let i=0;i<s.length;i++)a=a.map((x,j)=>Math.imul(x^(s.charCodeAt(i)+j*31),16777619)>>>0);const h=a.map(x=>x.toString(16).padStart(8,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-a'+h.slice(17,20)+'-'+h.slice(20,32)}
-/* ===== 液态玻璃：自绘背景 + WebGL 折射 ===== */
+/* ===== 液态玻璃：可更换背景 ===== */
 const WPS={
  aurora:{n:'极光',L:'#E6E9F5',D:'#04040A',b:[[.08,.04,.44,'255,59,120',.66],[.96,.10,.48,'0,122,255',.6],[.52,.30,.40,'255,204,0',.34],[.10,.96,.52,'52,199,89',.48],[.92,.92,.50,'175,82,222',.6],[.48,.66,.34,'0,199,190',.3]]},
  sunset:{n:'日落',L:'#2B1055',D:'#12081F',b:[[.5,1.0,.7,'255,120,60',.9],[.1,.7,.5,'255,45,85',.7],[.9,.6,.5,'255,204,0',.55],[.5,.1,.6,'120,60,220',.8]]},
@@ -1151,124 +1159,41 @@ const WPS={
  forest:{n:'森林',L:'#0E3B2E',D:'#04140F',b:[[.15,.15,.55,'80,220,120',.55],[.9,.4,.5,'0,160,140',.6],[.4,.95,.6,'200,230,90',.4],[.85,.0,.4,'30,120,90',.7]]},
  mono:{n:'石墨',L:'#D9DBE1',D:'#0A0A0C',b:[[.2,.15,.55,'255,255,255',.5],[.9,.8,.6,'150,150,170',.5],[.6,.4,.4,'255,255,255',.25]]}
 };
-const GL={on:false,ok:null,cv:null,gl:null,list:[],raf:0,tail:0,img:null,tex:null,tb:null,pr:null,u:{},buf:null,p:{ga:.06,gb:22,rf:22,bz:26,cards:true}};
-const glDark=()=>{const t=document.documentElement.getAttribute('data-theme');return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)};
-let wpKey='aurora';try{wpKey=localStorage.getItem('wp')||'aurora';const im=localStorage.getItem('wpimg');if(wpKey==='custom'&&im){const i=new Image();i.src=im;GL.img=i}else if(wpKey==='custom')wpKey='aurora'}catch(e){}
-function glParams(){
- const cs=getComputedStyle(document.documentElement),P=GL.p;
- P.ga=parseFloat(cs.getPropertyValue('--ga'))||0;P.gb=parseFloat(cs.getPropertyValue('--gb'))||0;
- try{P.rf=parseFloat(localStorage.getItem('gl_rf'));if(isNaN(P.rf))P.rf=22;P.bz=parseFloat(localStorage.getItem('gl_bz'));if(isNaN(P.bz))P.bz=26;P.cards=localStorage.getItem('gl_cards')!=='0'}catch(e){}
-}
+const wpDark=()=>{const t=document.documentElement.getAttribute('data-theme');return t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches)};
+let wpKey='aurora',wpImg=null;try{wpKey=localStorage.getItem('wp')||'aurora';const im=localStorage.getItem('wpimg');if(wpKey==='custom'&&im){wpImg=new Image();wpImg.src=im}else if(wpKey==='custom')wpKey='aurora'}catch(e){}
 function wpCanvas(w,h){
  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),m=Math.max(w,h);
- if(wpKey==='custom'&&GL.img&&GL.img.complete&&GL.img.naturalWidth){
-  const iw=GL.img.naturalWidth,ih=GL.img.naturalHeight,s=Math.max(w/iw,h/ih);x.drawImage(GL.img,(w-iw*s)/2,(h-ih*s)/2,iw*s,ih*s);return c}
- const W=WPS[wpKey]||WPS.aurora;x.fillStyle=glDark()?W.D:W.L;x.fillRect(0,0,w,h);
- W.b.forEach(([bx,by,br,rgb,a])=>{const k=glDark()?a*.85:a,g=x.createRadialGradient(bx*w,by*h,0,bx*w,by*h,br*m);g.addColorStop(0,`rgba(${rgb},${k})`);g.addColorStop(1,`rgba(${rgb},0)`);x.fillStyle=g;x.fillRect(0,0,w,h)});
+ if(wpKey==='custom'&&wpImg&&wpImg.complete&&wpImg.naturalWidth){const iw=wpImg.naturalWidth,ih=wpImg.naturalHeight,s=Math.max(w/iw,h/ih);x.drawImage(wpImg,(w-iw*s)/2,(h-ih*s)/2,iw*s,ih*s);return c}
+ const W=WPS[wpKey]||WPS.aurora,dk=wpDark();x.fillStyle=dk?W.D:W.L;x.fillRect(0,0,w,h);
+ W.b.forEach(([bx,by,br,rgb,a])=>{const g=x.createRadialGradient(bx*w,by*h,0,bx*w,by*h,br*m);g.addColorStop(0,`rgba(${rgb},${dk?a*.85:a})`);g.addColorStop(1,`rgba(${rgb},0)`);x.fillStyle=g;x.fillRect(0,0,w,h)});
  return c;
 }
-function glWallpaper(){
- const dpr=Math.min(devicePixelRatio||1,2),w=Math.max(2,Math.round(innerWidth*dpr)),h=Math.max(2,Math.round(innerHeight*dpr));
- if(GL.ok&&GL.on){
-  const gl=GL.gl,c=wpCanvas(w,h),sm=document.createElement('canvas');sm.width=Math.max(2,w>>3);sm.height=Math.max(2,h>>3);
-  const sx=sm.getContext('2d');sx.imageSmoothingQuality='high';sx.drawImage(c,0,0,sm.width,sm.height);
-  const sm2=document.createElement('canvas');sm2.width=Math.max(2,sm.width>>1);sm2.height=Math.max(2,sm.height>>1);sm2.getContext('2d').drawImage(sm,0,0,sm2.width,sm2.height);
-  const up=(t,src)=>{gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE)};
-  up(GL.tex,c);up(GL.tb,sm2);GL.cv.width=w;GL.cv.height=h;glKick(2);
- }else{
-  const c=wpCanvas(Math.max(2,w>>1),Math.max(2,h>>1));document.body.style.backgroundImage=`url(${c.toDataURL('image/jpeg',.82)})`;document.body.style.backgroundSize='cover';document.body.style.backgroundAttachment='fixed';document.body.style.backgroundPosition='center';
- }
+function applyWp(){
+ let d=document.getElementById('wpbg');
+ if(document.documentElement.getAttribute('data-look')!=='glass'){if(d)d.style.display='none';return}
+ if(!d){d=document.createElement('div');d.id='wpbg';d.style.cssText='position:fixed;inset:0;z-index:-1;pointer-events:none;background-size:cover;background-position:center';document.body.prepend(d)}
+ const r=Math.min(2.4,Math.max(1.2,innerHeight/Math.max(1,innerWidth))),c=wpCanvas(420,Math.round(420*r));
+ d.style.backgroundImage=`url(${c.toDataURL('image/jpeg',.86)})`;d.style.display='block';
 }
-function glInit(){
- try{
-  const cv=document.createElement('canvas');cv.id='glcv';cv.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:none';document.body.prepend(cv);
-  const gl=cv.getContext('webgl',{antialias:false,alpha:false,premultipliedAlpha:false});if(!gl){cv.remove();return false}
-  const vs=`attribute vec2 a_px;uniform vec2 u_res;varying vec2 v_px;void main(){v_px=a_px;gl_Position=vec4(a_px.x/u_res.x*2.-1.,1.-a_px.y/u_res.y*2.,0.,1.);}`;
-  const fs=`precision highp float;varying vec2 v_px;uniform vec2 u_res;uniform vec4 u_rect;uniform float u_rad,u_bez,u_str,u_blur,u_tint,u_mode;uniform vec3 u_tc;uniform sampler2D u_tex,u_tb;
-float sd(vec2 p,vec2 c,vec2 h,float r){vec2 q=abs(p-c)-h+r;return min(max(q.x,q.y),0.)+length(max(q,0.))-r;}
-vec3 smp(vec2 uv){return mix(texture2D(u_tex,uv).rgb,texture2D(u_tb,uv).rgb,u_blur);}
-void main(){
- if(u_mode<.5){gl_FragColor=vec4(texture2D(u_tex,v_px/u_res).rgb,1.);return;}
- vec2 c=u_rect.xy+u_rect.zw*.5,h=u_rect.zw*.5;float d=sd(v_px,c,h,u_rad);
- if(d>1.){discard;}
- float aa=1.-smoothstep(-.8,.8,d);
- vec2 n=normalize(vec2(sd(v_px+vec2(1.,0.),c,h,u_rad)-sd(v_px-vec2(1.,0.),c,h,u_rad),sd(v_px+vec2(0.,1.),c,h,u_rad)-sd(v_px-vec2(0.,1.),c,h,u_rad))+vec2(1e-5));
- float t=clamp(-d/u_bez,0.,1.);float prof=pow(1.-t,2.4);vec2 off=n*prof*u_str;
- vec3 col;col.r=smp((v_px+off)/u_res).r;col.g=smp((v_px+off*1.07)/u_res).g;col.b=smp((v_px+off*1.14)/u_res).b;
- float l=dot(col,vec3(.299,.587,.114));col=mix(vec3(l),col,1.4)*1.06;
- col=mix(col,u_tc,u_tint);
- vec2 L=normalize(vec2(-.6,-.8));float s=max(dot(n,L),0.),s2=max(dot(n,-L),0.);float rim=pow(1.-t,3.);
- col+=vec3(rim*(.5*s+.14*s2));col+=vec3(smoothstep(-1.8,-.3,d)*.4*(.2+.8*s));
- gl_FragColor=vec4(col,aa);
-}`;
-  const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o};
-  const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error('link');
-  gl.useProgram(pr);GL.cv=cv;GL.gl=gl;GL.pr=pr;GL.tex=gl.createTexture();GL.tb=gl.createTexture();GL.buf=gl.createBuffer();
-  ['u_res','u_rect','u_rad','u_bez','u_str','u_blur','u_tint','u_mode','u_tc','u_tex','u_tb'].forEach(k=>GL.u[k]=gl.getUniformLocation(pr,k));
-  const a=gl.getAttribLocation(pr,'a_px');gl.bindBuffer(gl.ARRAY_BUFFER,GL.buf);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
-  gl.uniform1i(GL.u.u_tex,0);gl.uniform1i(GL.u.u_tb,1);
-  const kick=n=>()=>glKick(n);
-  addEventListener('scroll',kick(6),{passive:true});addEventListener('touchmove',kick(4),{passive:true});
-  let rz=0;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(GL.on)glWallpaper()},250);glKick(4)});
-  new MutationObserver(()=>{if(GL.on){glRefresh();glKick(6)}}).observe(document.body,{childList:true,subtree:true});
-  new MutationObserver(()=>{if(GL.on)glWallpaper()}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-  try{matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(GL.on)glWallpaper()})}catch(e){}
-  return true;
- }catch(e){return false}
-}
-function glRefresh(){
- const sel=GL.p.cards?'.card,nav':'nav';
- const L=[...document.querySelectorAll(sel)].filter(e=>!e.closest('dialog')&&!e.closest('#ffull')&&!e.closest('#fsfull'));
- L.sort((a,b)=>((a.matches('nav')?1:0)-(b.matches('nav')?1:0)));GL.list=L;
-}
-function glDraw(){
- const gl=GL.gl;if(!gl||!GL.on)return;const W=innerWidth,H=innerHeight,P=GL.p,U=GL.u,dk=glDark();
- gl.viewport(0,0,GL.cv.width,GL.cv.height);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,GL.tex);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,GL.tb);
- gl.uniform2f(U.u_res,W,H);gl.disable(gl.BLEND);gl.uniform1f(U.u_mode,0);
- const quad=(x0,y0,x1,y1)=>{gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([x0,y0,x1,y0,x0,y1,x1,y1]),gl.DYNAMIC_DRAW);gl.drawArrays(gl.TRIANGLE_STRIP,0,4)};
- quad(0,0,W,H);
- gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.uniform1f(U.u_mode,1);
- gl.uniform1f(U.u_blur,Math.min(1,P.gb/44));gl.uniform1f(U.u_tint,Math.min(.9,P.ga));gl.uniform3f(U.u_tc,dk?.92:1,dk?.92:1,dk?.96:1);gl.uniform1f(U.u_str,P.rf);
- for(const e of GL.list){
-  const r=e.getBoundingClientRect();if(r.width<2||r.height<2||r.bottom<0||r.top>H||r.right<0||r.left>W)continue;
-  let rad=e._gr;if(rad==null){const v=getComputedStyle(e).borderTopLeftRadius;rad=v.endsWith('%')?Math.min(r.width,r.height)*parseFloat(v)/100:parseFloat(v)||0;e._gr=rad}
-  rad=Math.min(rad,r.width/2,r.height/2);
-  gl.uniform4f(U.u_rect,r.left,r.top,r.width,r.height);gl.uniform1f(U.u_rad,rad);gl.uniform1f(U.u_bez,Math.max(4,Math.min(P.bz,r.height/2,r.width/2)));
-  quad(r.left-2,r.top-2,r.right+2,r.bottom+2);
- }
-}
-function glLoop(){GL.raf=0;glDraw();if(--GL.tail>0)GL.raf=requestAnimationFrame(glLoop)}
-function glKick(n){GL.tail=Math.max(GL.tail,n||8);if(!GL.raf&&GL.on)GL.raf=requestAnimationFrame(glLoop)}
-function glStart(){
- const R=document.documentElement;glParams();
- if(GL.ok===null)GL.ok=glInit();
- if(!GL.ok){glWallpaper();return}
- GL.on=true;GL.cv.style.display='block';R.classList.add('gl-on');R.classList.toggle('gl-cards',GL.p.cards);glWallpaper();glRefresh();glKick(10);
-}
-function glStop(){
- const R=document.documentElement;GL.on=false;R.classList.remove('gl-on','gl-cards');if(GL.cv)GL.cv.style.display='none';
- if(document.body){document.body.style.backgroundImage='';document.body.style.backgroundSize='';document.body.style.backgroundAttachment='';document.body.style.backgroundPosition=''}
-}
-function glHook(k){try{if(k==='glass')glStart();else glStop()}catch(e){GL.ok=false}}
+function glHook(){try{applyWp()}catch(e){}}
 window.glHook=glHook;
-function setWp(k){wpKey=k;try{localStorage.setItem('wp',k)}catch(e){}if(document.documentElement.getAttribute('data-look')==='glass')glWallpaper();openLook()}
+try{new MutationObserver(()=>glHook()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});matchMedia('(prefers-color-scheme:dark)').addEventListener('change',glHook)}catch(e){}
+function setWp(k){wpKey=k;try{localStorage.setItem('wp',k)}catch(e){}glHook();openLook()}
 function wpPick(el){
  const f=el.files&&el.files[0];el.value='';if(!f)return;
  const im=new Image();im.onload=()=>{
   const c=document.createElement('canvas'),s=Math.min(1,1280/Math.max(im.width,im.height));c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
   const u=c.toDataURL('image/jpeg',.82);
   try{localStorage.setItem('wpimg',u)}catch(e){toast('照片太大，存不下，换一张小一点的');URL.revokeObjectURL(im.src);return}
-  const i2=new Image();i2.onload=()=>{GL.img=i2;setWp('custom')};i2.src=u;URL.revokeObjectURL(im.src)};
+  const i2=new Image();i2.onload=()=>{wpImg=i2;setWp('custom')};i2.src=u;URL.revokeObjectURL(im.src)};
  im.onerror=()=>toast('这张照片读取失败');im.src=URL.createObjectURL(f);
 }
-function setGl(k,v){try{localStorage.setItem('gl_'+k,v)}catch(e){}glParams();glKick(3)}
-function setGlCards(b){try{localStorage.setItem('gl_cards',b?'1':'0')}catch(e){}glParams();document.documentElement.classList.toggle('gl-cards',GL.p.cards&&GL.on);glRefresh();glKick(4)}
-try{glHook(document.documentElement.getAttribute('data-look'))}catch(e){}
+try{glHook()}catch(e){}
 
 const LOOKS=[['apple','苹果标准','清爽的 iOS 风格：圆角卡片、系统字体、系统配色、开关样式'],['glass','苹果·玻璃','液态玻璃：半透明磨砂、底部悬浮导航、高光边缘、渐变背景'],['film','胶片复古','原来的米色胶片风：打字机字体、拍立得、虚线、齿孔']];
-function setGlass(k,v){document.documentElement.style.setProperty('--'+k,v);try{localStorage.setItem('gl_'+k,v)}catch(e){}glParams();glKick(3)}
-function resetGlass(){['ga','gb'].forEach(k=>{document.documentElement.style.removeProperty('--'+k);try{localStorage.removeItem('gl_'+k)}catch(e){}});['rf','bz'].forEach(k=>{try{localStorage.removeItem('gl_'+k)}catch(e){}});glParams();glKick(3);openLook()}
-function openLook(){const cur=document.documentElement.getAttribute('data-look');showDlg(`<h3>🎨 外观</h3>${LOOKS.map(([k,n,d])=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;${cur===k?'outline:2px solid var(--acc)':''}" onclick="setLook('${k}');openLook()"><div><b>${n}</b><div class="mut">${d}</div></div><b style="color:var(--acc)">${cur===k?'✓':''}</b></div>`).join('')}${cur==='glass'?`<div class="card static"><b>玻璃调节</b><label>透明度（往左越透明，0 为完全透明）</label><input type="range" min="0" max="40" step="1" value="${Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ga'))*100)}" oninput="setGlass('ga',this.value/100)"><label>磨砂程度（往左越清晰）</label><input type="range" min="0" max="44" step="1" value="${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gb'))}" oninput="setGlass('gb',this.value+'px')"><label>折射强度（边缘扭曲程度）</label><input type="range" min="0" max="60" step="1" value="${GL.p.rf}" oninput="setGl('rf',this.value)"><label>边缘宽度（扭曲区域有多宽）</label><input type="range" min="8" max="50" step="1" value="${GL.p.bz}" oninput="setGl('bz',this.value)"><label style="display:flex;justify-content:space-between;align-items:center;margin-top:12px"><span>卡片也折射（滚动时可能有轻微延迟）</span><input type="checkbox" ${GL.p.cards?'checked':''} onchange="setGlCards(this.checked)"></label><label>背景</label><div style="display:flex;gap:6px;flex-wrap:wrap">${Object.entries(WPS).map(([k,w])=>`<button class="btn ${wpKey===k?'':'o'}" style="padding:5px 12px;font-size:13px" onclick="setWp('${k}')">${w.n}</button>`).join('')}<button class="btn ${wpKey==='custom'?'':'o'}" style="padding:5px 12px;font-size:13px" onclick="this.nextElementSibling.click()">📷 相册</button><input type="file" accept="image/*" style="display:none" onchange="wpPick(this)"></div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn o" onclick="setGlass('ga',0.01);setGlass('gb','28px');openLook()">极致透明</button><button class="btn o" onclick="resetGlass()">恢复默认</button></p></div>`:''}<p class="mut">外观只保存在这台手机上，两个人可以各选各的。</p><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button></p>`)}
+function setGlass(k,v){document.documentElement.style.setProperty('--'+k,v);try{localStorage.setItem('gl_'+k,v)}catch(e){}}
+function resetGlass(){['ga','gb'].forEach(k=>{document.documentElement.style.removeProperty('--'+k);try{localStorage.removeItem('gl_'+k)}catch(e){}});openLook()}
+function openLook(){const cur=document.documentElement.getAttribute('data-look');showDlg(`<h3>🎨 外观</h3>${LOOKS.map(([k,n,d])=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;${cur===k?'outline:2px solid var(--acc)':''}" onclick="setLook('${k}');openLook()"><div><b>${n}</b><div class="mut">${d}</div></div><b style="color:var(--acc)">${cur===k?'✓':''}</b></div>`).join('')}${cur==='glass'?`<div class="card static"><b>玻璃调节</b><label>透明度（往左越透明，0 为完全透明）</label><input type="range" min="0" max="40" step="1" value="${Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ga'))*100)}" oninput="setGlass('ga',this.value/100)"><label>磨砂程度（往左越清晰）</label><input type="range" min="0" max="44" step="1" value="${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gb'))}" oninput="setGlass('gb',this.value+'px')"><label>背景</label><div style="display:flex;gap:6px;flex-wrap:wrap">${Object.entries(WPS).map(([k,w])=>`<button class="btn ${wpKey===k?'':'o'}" style="padding:5px 12px;font-size:13px" onclick="setWp('${k}')">${w.n}</button>`).join('')}<button class="btn ${wpKey==='custom'?'':'o'}" style="padding:5px 12px;font-size:13px" onclick="this.nextElementSibling.click()">📷 相册</button><input type="file" accept="image/*" style="display:none" onchange="wpPick(this)"></div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn o" onclick="setGlass('ga',0.01);setGlass('gb','28px');openLook()">极致透明</button><button class="btn o" onclick="resetGlass()">恢复默认</button></p></div>`:''}<p class="mut">外观只保存在这台手机上，两个人可以各选各的。</p><p style="text-align:right"><button class="btn o" onclick="$('#dlg').close()">关闭</button></p>`)}
 const showDlg=h=>{$('#dlg').innerHTML=h;if(!$('#dlg').open)$('#dlg').showModal()};
 async function loadBills(){
  try{const r=(await rest('bills?select=*&order=dt.desc,created_at.desc&limit=5000'))||[],sg=JSON.stringify(r.map(b=>[b.id,b.kind,b.owner,b.amt,b.cat,b.dt,b.note,b.acct,b.shared]));
